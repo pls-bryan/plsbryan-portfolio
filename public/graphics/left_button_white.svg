@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:71ceb2dd206f936ab3d4cbf10385e517d846cfe64fe7717964623a788387e4bc
-size 535
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 253.68 292.93">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <polygon points="90.05 283.43 10.97 146.46 90.05 9.5 237.23 9.5 158.15 146.46 237.23 283.43 90.05 283.43"/>
+  <path class="cls-1" d="M220.77,19l-68.11,117.96-5.48,9.5,5.48,9.5,68.11,117.96h-125.24L21.94,146.46,95.53,19h125.24M253.68,0H84.56L0,146.46l84.56,146.46h169.12l-84.56-146.46L253.68,0h0Z"/>
+</svg>
