@@ -1,0 +1,20 @@
+---
+type Props = {
+    title: string;
+    images: string[];
+}
+
+const { title, images }: Props = Astro.props;
+---
+<div class="shoot-component">
+    <div class="shoot-text" id="gallery-start">{title}</div>
+    <div class="shoot-frame" id={title}>
+        <!---->
+        {images.map((image) => (
+
+            <div class="shoot-image"><img src={image} alt=""></div>
+        ))}
+    </div>
+    
+    
+</div>

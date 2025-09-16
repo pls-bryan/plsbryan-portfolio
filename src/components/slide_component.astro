@@ -1,0 +1,50 @@
+---
+type Props = {
+    title: string;
+    images: string[];
+    template: number;
+}
+
+const { title, images, template }: Props = Astro.props;
+---
+
+{template === 1 && (
+<div class="swiper-slide">
+    <div class="image-grid grid-template-1">
+        <div class="thirds-main-image"><img class="featured-image" src={images[0]} alt=""></div>
+        <div class="thirds-main-image"><img class="featured-image" src={images[1]} alt=""></div>
+        <div class="thirds-main-image"><img class="featured-image" src={images[2]} alt=""></div>
+        
+    </div>
+</div>
+)}
+
+{template === 2 && (
+    <div class="swiper-slide">
+        <div class="image-grid grid-template-2">
+            
+            <div class="portrait-main-image"><img class="featured-image" src={images[0]} alt=""></div>
+        
+            <div class="portrait-small-images-grid">
+                <div class="portrait-small-image"><img class="featured-image" src={images[1]} alt=""></div>
+                <div class="portrait-small-image"><img class="featured-image" src={images[2]} alt=""></div>
+                        
+            </div>
+            <div class="portrait-secondary-image"><img class="featured-image" src={images[3]} alt=""></div>
+        </div>
+    </div>
+)}
+
+{template === 3 && (      
+    <div class="swiper-slide">
+        <div class="image-grid grid-template-3">
+            <div class="main-image"><img class="featured-image" src={images[0]} alt=""></div>
+            <div class="small-images-grid">
+                <div class="small-image"><img class="featured-image" src={images[1]} alt=""></div>
+                <div class="small-image"><img class="featured-image" src={images[2]} alt=""></div>
+                <div class="small-image"><img class="featured-image" src={images[3]} alt=""></div>
+                <div class="small-image"><img class="featured-image" src={images[4]} alt=""></div>        
+            </div>
+        </div>
+    </div>
+)}

@@ -1,11 +1,287 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+/**
+ * FRONTMATTER: runs at build/dev time (Node), not in the browser.
+ * - Reads your /public images
+ * - Builds data for Shoot/Slide components
+ * - Exposes arrays you can map over in the template below
+ */
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+ import fs from 'node:fs';
+import path from 'node:path';
+
+// Import any components you'll render on this page.
+// (If you don't use Slide yet, remove that import.)
+import Shoot from '../components/shoot_component.astro';
+import Slide from '../components/slide_component.astro';
+
+/* ============================================================
+   CONFIG — tweak these to match your project
+   ============================================================ */
+
+// Absolute path to your project root on disk.
+const ROOT = process.cwd();
+
+// Where your static assets live (everything in /public is served as-is)
+const PUBLIC_DIR = path.join(ROOT, 'public');
+
+// Folder containing all shoot folders, e.g.:
+// public/images/shoots/<each-shoot-folder>/{image files}
+const SHOOTS_DIR = path.join(PUBLIC_DIR, 'images');
+
+// Optional: a folder of featured images for your Swiper,
+// e.g. public/images/featured/{slide files}
+const FEATURED_DIR = path.join(PUBLIC_DIR, 'featured');
+
+// File extensions we consider as images
+const IMAGE_EXT_RE = /\.(avif|webp|jpe?g|png|gif)$/i;
+
+// Helper: turn "desert-light" into "Desert Light"
+const titleize = (slug) =>
+  slug
+    .slice(2)
+    .replace(/[_]+/g, ' ')
+    .trim()
+    /*.replace(/\b\w/g, (c) => c.toUpperCase());*/
+
+/* ============================================================
+   UTILS — safe readers so dev server doesn't crash if folders
+   are missing while you scaffold
+   ============================================================ */
+
+function safeReadDirSync(dir) {
+  try {
+    return fs.readdirSync(dir);
+  } catch {
+    return []; // folder doesn't exist yet; return empty
+  }
+}
+
+function isDirectory(fullPath) {
+  try {
+    return fs.statSync(fullPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/* ============================================================
+   BUILD SHOOTS ARRAY
+   - Each subfolder in /public/images/shoots is one shoot
+   - We collect its images and build public URLs
+   ============================================================ */
+
+const shootDirs = safeReadDirSync(SHOOTS_DIR)
+  .filter((name) => isDirectory(path.join(SHOOTS_DIR, name)));
+
+const featuredDirs = safeReadDirSync(FEATURED_DIR)
+.filter((name) => isDirectory(path.join(FEATURED_DIR, name)));
+
+// Adjust sorting here if needed (e.g., newest first)
+// shootDirs.sort((a, b) => b.localeCompare(a)); // reverse alpha
+shootDirs.sort(); // simple alpha by default
+
+featuredDirs.sort();
+
+const shoots = shootDirs.map((dir) => {
+  const full = path.join(SHOOTS_DIR, dir);
+
+  // Read and filter image files in this shoot folder
+  const files = safeReadDirSync(full)
+    .filter((f) => IMAGE_EXT_RE.test(f))
+    .sort(); // tweak sorting if you want 01,02,... order
+
+  // Build public URLs for <img src="..."> (anything under /public is served from “/”)
+  const images = files.map((f) => `/images/${dir}/${f}`);
+
+  // Choose a cover image (first one by default)
+  const cover = images[0] ?? null;
+
+  return {
+    slug: dir,                 // e.g. "desert-light"
+    title: titleize(dir),      // e.g. "Desert Light"
+    images,                    // array of public URLs
+    cover,                     // first image (optional)
+  };
+});
+
+const featured_shoots = featuredDirs.map((dir) => {
+  const full = path.join(FEATURED_DIR, dir);
+
+  // Read and filter image files in this shoot folder
+  const files = safeReadDirSync(full)
+    .filter((f) => IMAGE_EXT_RE.test(f))
+    .sort(); // tweak sorting if you want 01,02,... order
+
+  // Build public URLs for <img src="..."> (anything under /public is served from “/”)
+  const featured_images = files.map((f) => `/featured/${dir}/${f}`);
+
+  // Choose a cover image (first one by default)
+  const cover = featured_images[0] ?? null;
+
+  const template = parseInt(dir.slice(-1)); // get the last character of the directory name
+
+  return {
+    slug: dir,                 // e.g. "desert-light"
+    title: titleize(dir),      // e.g. "Desert Light"
+    featured_images,                    // array of public URLs
+    cover,                     // first image (optional)
+    template,
+  };
+});
+
+/* ============================================================
+   FEATURED SLIDES (for Swiper)
+   - Option A: auto-discover from a folder
+   - Option B: hardcode an array if you prefer full control
+   ============================================================ */
+
+// Option A (folder-based): read all images under /public/images/featured
+/*
+const featuredSlidesAuto = safeReadDirSync(FEATURED_DIR)
+  .filter((f) => IMAGE_EXT_RE.test(f))
+  .sort()
+  .map((f) => ({
+    src: `/images/featured/${f}`,
+    alt: f.replace(IMAGE_EXT_RE, '').replace(/[-_]+/g, ' '),
+  }));
+*/
+
+
+// Option B (manual): uncomment & edit if you want to control order/captions precisely
+/*
+const featuredSlidesManual = [
+  { src: '/images/featured/01.jpg', alt: 'Desert Muse' },
+  { src: '/images/featured/02.jpg', alt: 'Studio Glow' },
+];
+*/
+
+// Choose which source to use for your template below:
+//const featuredSlides = featuredSlidesAuto; // or featuredSlidesManual
+
+/* ============================================================
+   EXPORT WHAT YOU'LL USE IN THE TEMPLATE
+   - Now you can map over {shoots} and {featuredSlides}
+   - Example in template:
+     {shoots.map(s => <Shoot title={s.title} images={s.images} />)}
+     {featuredSlides.map(slide => <Slide src={slide.src} alt={slide.alt} />)}
+   ============================================================ */
+
+export { shoots, Shoot, featured_shoots};
+
+console.log(shoots[0].images[0]);
+
+/**/
+
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Link Swiper's CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <script src="image_data.js" defer></script>
+    <script src="main.js" defer></script>
+	<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div></div>
+        
+        <a href="index.html" id="homeButton">
+            <img src="graphics/pls_logo.svg" alt="PLS Logo">
+        </a>
+        
+        
+        <a href="#gallery-start" class="full-portfolio-link" id="scrollLink">Full Collection</a>
+        
+    </header>
+    <main>
+        <div class="photo-slider">
+            <div class="left-button">
+                <button class="prev"><img src="graphics/left_button_white.svg" alt="Previous"></button>
+            </div>
+            <div class="photo-carousel">
+                <div class="swiper mySwiper">
+                    <div class="swiper-wrapper">
+                        {featured_shoots.map(s => <Slide title={s.title} images={s.featured_images} template={s.template} />)}
+
+
+
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="right-button">
+                <button class="next"><img src="graphics/right_button_white.svg" alt="Next"></button>
+            </div>
+        
+        
+        </div>
+        <div class="book-with-button-frame">
+            <a href="booking_page.html" class="book-with-button"><img src="graphics/bookwithpls-black.jpg" alt="Book With PLS"></a></div>
+        </div>
+        <div class="bio-frame">
+            <div class="bio-image">
+                <img src="stock/bio-portrait.jpg" alt="Bio Image">
+            </div>
+            <div class="bio-text-frame">
+                <a href="https://instagram.com/pls.bryan" class="name-line">
+                    pls.bryan
+                </a>
+                <div class="location-line">
+                    <div class="location-icon">
+                        <img src="graphics/location_icon.svg" alt="Location Icon">
+                    </div>
+                    <div class="location-line-text">
+                        NYC // STL
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="bio-stock-image">
+                <img src="" alt="">
+            </div>
+        
+        </div>
+        <div class="full-portfolio-arrow">
+            <div class="full-portfolio-text">Full Collection</div>
+            
+            
+            <div class="full-portfolio-arrow-icon">
+                <a href="#gallery-start" id="scrollLink"><img src="graphics/down_arrow.svg" alt="Down Arrow"></a>
+            </div>
+
+        </div>
+        <!-- --- -->
+		
+		
+		
+		
+		<!-- --- -->
+		{shoots.map(s => <Shoot title={s.title} images={s.images} />)}
+
+
+
+
+        <div class="coming-soon-frame">
+            <div class="coming-soon-text">More Coming Soon!</div>
+        </div>
+    
+        
+        
+          
+    </main>
+
+    
+
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Link Swiper's CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <script src="image_data.js" defer></script>
+    <script src="components/main.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div></div>
+        
+        <a href="index.html" id="homeButton">
+            <img src="graphics/pls_logo.svg" alt="PLS Logo">
+        </a>
+        
+        
+        
+    </header>
+    <main>
+        <div class="main-booking-form">
+            
+            <div class="form">
+                <form action="https://formspree.io/f/manbjyea" method="POST">
+                    <div class="booking-button-frame">
+                        <div class="booking-button">
+                            <img src="graphics/bookwithpls-black.jpg" alt="Book With PLS">
+                        </div>
+
+                    </div>
+                    <div class="form-line" id="line-1">
+                        <div class="form-section" id="name-section">
+                            <label>
+                                <div class="form-section-title" id="name-title">name: </div>
+                                 <input type="name" name="name" class="form-input"id="name-input" placeholder="name" required>
+                                <!--<div class="form-section-input" id="name-input">
+                                </div>-->
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-line" id="line-2">
+                        <div class="form-section" id="number-section">
+                            <div class="form-section-title" id="number-title">phone number: </div>
+                            <input type="phone" name="phone-number" class="form-input"id="phone-input" placeholder="(xxx) xxx-xxxx" required>
+                        </div>
+                        <div class="form-section" id="email-section">
+                            <div class="form-section-title" id="email-title">email address: </div>
+                            <input type="email" name="email" class="form-input"id="email-input" placeholder="yourname@gmail.com" required>
+                        </div>
+                    </div>
+                    <div class="form-line" id="line-3">
+                        <div class="form-section" id="details-section">
+                            <div class="form-section-title" id="details-title">shoot details? </div>
+                            <!--<input type="text" name="details" class="form-input"id="details-input" placeholder="what do you want?">-->
+                            <textarea type="text" name="details" class="form-input" id="details-input" placeholder="what do you want?" required></textarea>
+                        </div>
+                    </div>
+                    <div class="form-line" id="line-4">
+                        <div class="form-section" id="numpeople-section">
+                            <div class="form-section-title" id="numpeople-title">how many people? </div>
+                            <input type="number" name="numpeople" class="form-input"id="numpeople-input" placeholder="how many people?" required>
+                        </div>
+                    </div>
+                    <div class="form-line" id="line-5">
+                        <div class="form-section" id="socials-section">
+                            <div class="form-section-title" id="socials-title">socials // instagram @: </div>
+                            <input type="text" name="socials" class="form-input"id="socials-input" placeholder="@your.instagram" required>
+                        </div>
+                    </div>
+                    <div class="form-line" id="line-6">
+                        <div class="submit-button-frame">
+                            <!--<div class="submit-button"></div>-->
+                            <button type="submit" class="submit-button">SUBMIT</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="form-image-frame">
+                <div class="form-image"><img src="stock/bookingpage_stock/1.jpg" alt="Form Image 1"></div>
+                <div class="form-image"><img src="stock/bookingpage_stock/2.jpg" alt="Form Image 2"></div>
+                <div class="form-image"><img src="stock/bookingpage_stock/3.jpg" alt="Form Image 3"></div>
+            </div>
+                
+            </div>
+
+        
+        
+        </div>
+    </main>
+</body>
+</html>
