@@ -6,7 +6,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "postinstall": "git lfs install && git lfs fetch --all && git lfs checkout"
+  }
   },
   "dependencies": {
     "astro": "^5.12.8"
