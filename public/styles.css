@@ -185,7 +185,7 @@ input {
     padding: 0;
     height:auto;
     border: none;
-    opacity: 0;
+    opacity: 0.18;
     transition: opacity 0.2s ease-in-out;
 }
 
