@@ -29,7 +29,7 @@ header {
     
     width: 100%;
     /*min-width:1440px;*/
-    height:fit-content;
+    height: auto;
     z-index: 1000;
     border-bottom: 1px solid #000000;
     padding-right: 4%;
@@ -117,11 +117,13 @@ input {
     flex-direction: row;
     justify-content: center;
     align-items: center;
+    width: 100%;
 }
 
 #homeButton img{
-    width: 27%;
-    justify-self: center;
+    width: 5.2vw;
+    height: auto;
+    display: block;
 }
 
 .full-portfolio-link {
