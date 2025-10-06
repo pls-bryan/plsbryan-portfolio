@@ -6,8 +6,10 @@
  * - Exposes arrays you can map over in the template below
  */
 
- import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
+import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 
 // Import any components you'll render on this page.
 // (If you don't use Slide yet, remove that import.)
@@ -189,6 +191,8 @@ console.log(shoots[0].images[0]);
     <script src="image_data.js" defer></script>
     <script src="main.js" defer></script>
 	<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
+  <Analytics />
+
 </head>
 
 <body>
@@ -275,7 +279,7 @@ console.log(shoots[0].images[0]);
         <div class="coming-soon-frame">
             <div class="coming-soon-text">More Coming Soon!</div>
         </div>
-    
+        <SpeedInsights />
         
         
           
