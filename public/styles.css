@@ -567,6 +567,13 @@ input {
     object-fit: contain;
 }
 
+.bio-text-line {
+    font-family: 'inter';
+    font-size: 1.4vw;
+    font-weight: 100;
+    font-style: normal;
+}
+
 .spacer {
     flex-grow: 1;
 }
