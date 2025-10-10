@@ -462,12 +462,21 @@ input {
     font-family: 'inter';
     font-style: italic;
     font-size: 1.75vw;
-    font-weight: 100;
+    font-weight: 250;
     text-align: right;
     transition: text-decoration 0.3s ease-in-out;
 }
-.buy-the-stickers:hover {
+.buy-the-stickers:hover:not(.arrow) {
     text-decoration: underline;
+}
+
+.buy-the-stickers .arrow {
+    transition: font-size 0.15s ease-in-out;
+}
+
+.buy-the-stickers:hover .arrow {
+    font-size: 2.15vw;
+    text-decoration: none;
 }
 
 #header-book-with-button {
@@ -532,7 +541,7 @@ input {
     flex-direction: column;
     align-items: flex-start;
    /* padding: 4% 0px 6.25%;*/
-    gap: 1.15vh;
+    gap: 1vw;
 
     width: fit-content;
     margin-top: 5.75%
