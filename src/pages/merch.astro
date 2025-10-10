@@ -1,0 +1,14 @@
+---
+const stripeLink = 'https://buy.stripe.com/6oU00kcmD8WQ3rnaewgA800';
+---
+<html lang="en">
+  <head>
+    <meta http-equiv="refresh" content={`0; url=${stripeLink}`} />
+    <title>Redirecting to checkout...</title>
+  </head>
+  <body style="font-family: system-ui; display: grid; place-items: center; height: 100vh;">
+    <p>Redirecting you to checkout…
+      <a href={stripeLink}>click here if nothing happens</a>.
+    </p>
+  </body>
+</html>

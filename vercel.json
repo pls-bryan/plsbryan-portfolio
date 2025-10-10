@@ -1,0 +1,9 @@
+{
+    "redirects": [
+      {
+        "source": "/merch",
+        "destination": "https://buy.stripe.com/6oU00kcmD8WQ3rnaewgA800",
+        "permanent": false
+      }
+    ]
+  }

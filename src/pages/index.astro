@@ -197,14 +197,16 @@ console.log(shoots[0].images[0]);
 
 <body>
     <header>
-        <div></div>
+         
         
+        <a href="#collection-text" class="full-portfolio-link" id="scrollLink">Full Collection</a>
+
         <a href="index.html" id="homeButton">
             <img src="graphics/pls_logo.svg" alt="PLS Logo">
         </a>
         
+        <a href="/booking" class="book-with-button" id="header-book-with-button"><img src="graphics/bookwithpls-black-01.jpg" alt="Book Your Session with PLS"></a> 
         
-        <a href="#gallery-start" class="full-portfolio-link" id="scrollLink">Full Collection</a>
         
     </header>
     <main>
@@ -230,24 +232,36 @@ console.log(shoots[0].images[0]);
         
         </div>
         <div class="book-with-button-frame">
-            <a href="/booking" class="book-with-button"><img src="graphics/bookwithpls-black.jpg" alt="Book With PLS"></a></div>
+            <a href="/booking" class="book-with-button"><img src="graphics/bookwithpls-black.jpg" alt="Book Your Session with PLS"></a>
+            <a href="https://buy.stripe.com/6oU00kcmD8WQ3rnaewgA800" class="buy-the-stickers" target="_blank">...or Buy the Stickers</a>
         </div>
         <div class="bio-frame">
             <div class="bio-image">
-                <img src="stock/bio-portrait.webp" alt="Bio Image">
+                <img src="stock/bio-portrait.webp" alt="Bio Image" loading="lazy">
             </div>
             <div class="bio-text-frame">
-                <a href="https://instagram.com/pls.bryan" class="name-line">
+                <div  class="name-line">
                     pls.bryan
-                </a>
+                </div>
                 <div class="location-line">
                     <div class="location-icon">
-                        <img src="graphics/location_icon.svg" alt="Location Icon">
+                        <img src="graphics/location_icon.svg" alt="Location Icon" loading="lazy">
                     </div>
                     <div class="location-line-text">
                         NYC // STL
                     </div>
                     
+                </div>
+                <div class="bio-icon-line">
+                    <a href="mailto:contact@bryanammons.me" target="_blank" class="email-icon">
+                        <img src="graphics/email_icon.svg" alt="Email Me!" loading="lazy">
+                    </a>
+                    <a href="https://instagram.com/pls.bryan" target="_blank" class="instagram-icon">
+                      <img src="graphics/instagram_icon.svg" alt="Follow Me on Instagram!" loading="lazy">
+                    </a>
+                    <div class="linkedin-icon">
+                      <img src="graphics/linkedin_icon.svg" alt="Connect with Me on LinkedIn!" loading="lazy">
+                    </div>
                 </div>
                 <div class="bio-text-line">
                   Bryan Ammons is a photographer based in St. Louis, attending Columbia University.
@@ -262,12 +276,12 @@ console.log(shoots[0].images[0]);
             </div>
         
         </div>
-        <div class="full-portfolio-arrow">
-            <div class="full-portfolio-text">Full Collection</div>
+        <div class="full-portfolio-arrow" id="collection-text" >
+            <div class="full-portfolio-text" >Full Collection</div>
             
             
             <div class="full-portfolio-arrow-icon">
-                <a href="#gallery-start" id="scrollLink"><img src="graphics/down_arrow.svg" alt="Down Arrow"></a>
+                <a href="#gallery-start" id="scrollLink"><img src="graphics/down_arrow.svg" alt="Down Arrow" loading="lazy"></a>
             </div>
 
         </div>

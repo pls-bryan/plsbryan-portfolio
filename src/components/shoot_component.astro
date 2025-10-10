@@ -12,7 +12,7 @@ const { title, images }: Props = Astro.props;
         <!---->
         {images.map((image) => (
 
-            <div class="shoot-image"><img src={image} alt=""></div>
+            <div class="shoot-image"><img src={image} alt="" loading="lazy"></div>
         ))}
     </div>
     

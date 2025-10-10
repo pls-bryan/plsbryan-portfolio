@@ -88,7 +88,7 @@ label {
 
 input {
     width: 75%;
-    height: 7vh;
+    aspect-ratio: 16;
 }
 
 .logo {
@@ -99,7 +99,7 @@ input {
 }
 
 .full-portfolio-link {
-    justify-self: end;
+    justify-self: start;
     text-decoration: none;
     font-size: 2.25vw;
     font-weight: 100;
@@ -126,10 +126,6 @@ input {
     display: block;
 }
 
-.full-portfolio-link {
-    justify-self: end;
-    text-decoration: none;
-}
 
 #homeButton {
     scroll-behavior: auto;
@@ -422,16 +418,18 @@ input {
 
 /* Auto layout */
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     
-    gap: 10px;
+    gap: 1.05vh;
 
     width: 100%;
     height: fit-content;
 
-    padding-top: 3.7%;
+    padding-top: 6.2%;
+    padding-bottom: 1.4%;
+    
 
 }
 
@@ -440,7 +438,7 @@ input {
     width: 48%;
     height: fit-content;
     background: #FFFFFF;
-    border: 1px solid #000000;
+    
     transition: width 0.2s ease-in-out;
 }
 
@@ -455,6 +453,37 @@ input {
 
 .book-with-button:hover {
     width: 50%;
+}
+
+.buy-the-stickers {
+    width: 48%;
+    text-decoration: none;
+    color: #000000;
+    font-family: 'inter';
+    font-style: italic;
+    font-size: 1.75vw;
+    font-weight: 100;
+    text-align: right;
+    transition: text-decoration 0.3s ease-in-out;
+}
+.buy-the-stickers:hover {
+    text-decoration: underline;
+}
+
+#header-book-with-button {
+    width: 28%;
+    /*transform: rotate(-18deg);*/
+    transition: width 0.8s ease-in-out;
+    opacity: 0;
+    justify-self: end;
+}
+
+#header-book-with-button:hover {
+    width: 30%;
+}
+#header-book-with-button img{
+    aspect-ratio: 3;
+    
 }
 
 .bio-frame {
@@ -506,7 +535,7 @@ input {
     gap: 1.15vh;
 
     width: fit-content;
-    margin-top: 8%
+    margin-top: 5.75%
     
 }
 
@@ -536,9 +565,9 @@ input {
 
 }
 
-.name-line:hover {
+/*.name-line:hover {
     text-decoration: underline;
-}
+}*/
 
 .location-line {
     font-family: 'inter';
@@ -566,6 +595,49 @@ input {
     height: 100%;
     object-fit: contain;
 }
+
+.bio-icon-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.04%;
+    padding-left: 1%;
+}
+.email-icon, .x-icon {
+
+    width: 6%;
+    height: auto;
+    transition: width 0.2s ease-in-out;
+    
+}
+
+.email-icon:hover, .x-icon:hover{
+    width: 6.5%
+}
+
+.linkedin-icon {
+    width: 6%;
+    height: auto;
+    display: none;
+}
+.instagram-icon {
+    width: 5%;
+    height: auto;
+    transition: width 0.2s ease-in-out;
+    
+}
+
+.instagram-icon:hover{
+    width: 5.75%
+}
+
+.email-icon img, .instagram-icon img, .x-icon img, .linkedin-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+        
+    
 
 .bio-text-line {
     font-family: 'inter';
@@ -810,8 +882,8 @@ input {
     box-sizing: border-box;
     
     width: 45%;
-    aspect-ratio: 1.5;
-    
+    /*aspect-ratio: 1.5;*/
+    height: fit-content;
 
     display: grid;
     grid-template-rows: 1fr 1fr 1fr;
@@ -819,12 +891,32 @@ input {
 
 }
 
+
+@media (max-width: 800px) {
+    .main-booking-form {
+        flex-direction: column;
+    }
+    /*.form-image-frame {
+        display: none;
+    }*/
+    .form-image-frame {
+        width: 100%;
+        
+    }
+    .form {
+        width: 100%;
+    }
+}
+
+
 .form-image {
     width: 100%;
     height: 100%;
+    aspect-ratio: 1.5;
     overflow: hidden;
     background-color: #FFFFFF;
     border: 1px solid #000000;
+
 }
 
 .form-image img {
@@ -962,14 +1054,16 @@ padding-bottom: 4%;
     padding-right: 0%;
 }
 
-#number-input, #email-input {
+#number-input, #email-input, #phone-input {
     width: 90%;
+    aspect-ratio: 10;
 }
 
 #details-input {
 
-    height: 28vh;
+    /*height: 28vh;*/ 
     width: 75%;
+    aspect-ratio: 4;
     resize: none;
     font-size: 1.5vw;
     font-weight: 100;
