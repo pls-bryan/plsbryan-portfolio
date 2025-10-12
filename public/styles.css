@@ -461,7 +461,7 @@ input {
     color: #000000;
     font-family: 'inter';
     font-style: italic;
-    font-size: 1.75vw;
+    font-size: 1.85vw;
     font-weight: 250;
     text-align: right;
     transition: text-decoration 0.3s ease-in-out;
@@ -471,11 +471,12 @@ input {
 }
 
 .buy-the-stickers .arrow {
+    font-size: 1.85vw;
     transition: font-size 0.15s ease-in-out;
 }
 
 .buy-the-stickers:hover .arrow {
-    font-size: 2.15vw;
+    font-size: 1.6vw;
     text-decoration: none;
 }
 
@@ -614,7 +615,7 @@ input {
 }
 .email-icon, .x-icon {
 
-    width: 6%;
+    width: 7%;
     height: auto;
     transition: width 0.2s ease-in-out;
     
@@ -630,7 +631,7 @@ input {
     display: none;
 }
 .instagram-icon {
-    width: 5%;
+    width: 6%;
     height: auto;
     transition: width 0.2s ease-in-out;
     
