@@ -285,6 +285,7 @@ input {
     /*aspect-ratio: 40/18;*/
     height: 100%;
     box-sizing: border-box;
+    border: 0.05vw solid #808080;
     /*border: 0.33vw solid #000000;*/
 }
 
@@ -294,6 +295,7 @@ input {
     /*aspect-ratio: 40/18;*/
     height: 100%;
     box-sizing: border-box;
+    border: 0.05vw solid #808080;
    
 }
 
@@ -321,6 +323,7 @@ input {
     display: grid;
     grid-template-rows: 51fr 29fr;
     gap: 2.04%;
+    border: 0.05vw solid #808080;
     
 }
 
