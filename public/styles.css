@@ -40,6 +40,11 @@ header {
 main {
     padding-top: 6.8%;
 }
+.clock-page main {
+    padding-top: 0;
+}
+
+
 
 html, body {
     margin: 0;
