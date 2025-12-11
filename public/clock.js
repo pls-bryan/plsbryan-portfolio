@@ -13,7 +13,7 @@ let hour_inner_scale = 1200/301;  // 7.5% larger radius, same thickness
 let hour_outer_scale = 400/107;
 let clearing = { second: false, minute: false, hour: false }; // Track if circles are being cleared
 let rings = []; // Array to store all ring dimensions for collision detection
-
+let already_cleared = false;
 // Toolbar state
 let showNumbers = false;
 let darkMode = null; // null = auto (follows AM/PM), true = dark, false = light
@@ -220,54 +220,32 @@ function setup() {
     let minuteInnerRadius = windowWidth / minute_inner_scale;
     let minuteOuterRadius = windowWidth / minute_outer_scale;
     let hourInnerRadius = windowWidth / hour_inner_scale;
-    let spawn_delay = 10;
-    let spawnStartTime = 0;
-    let canSpawn = false;
 
-    
-    // Spawn seconds at random positions near center
-    let secondArcRadius = (secondInnerRadius) / 2;
+    // Spawn seconds along arc inside seconds ring
+    let secondArcRadius = secondInnerRadius / 2;
     for (let i = 0; i < currentSecond; i++) {
-        spawnStartTime = millis();
-        while (millis() - spawnStartTime < spawn_delay) {
-            canSpawn = false;
-        }
-        if (!canSpawn) {
-            let angle = random(TWO_PI); // Random angle along upper half of arc
-            let spawnX = donutX + cos(angle) * secondArcRadius;
-            let spawnY = donutY + sin(angle) * secondArcRadius;
-            secondsCircles.push(new Circle(spawnX, spawnY, second_inner_scale, [100, 150, 200], 1.0));
-        }
+        let angle = random(TWO_PI);
+        let spawnX = donutX + cos(angle) * secondArcRadius;
+        let spawnY = donutY + sin(angle) * secondArcRadius;
+        secondsCircles.push(new Circle(spawnX, spawnY, second_inner_scale, [100, 150, 200], 1.0));
     }
     
     // Spawn minutes along arc between second's outer and minute's inner radius
     let minuteArcRadius = (secondOuterRadius + minuteInnerRadius) / 2;
     for (let i = 0; i < currentMinute; i++) {
-        spawnStartTime = millis();
-        while (millis() - spawnStartTime < spawn_delay) {
-            canSpawn = false;
-        }
-        if (!canSpawn) {
-            let angle = random(TWO_PI); // Random angle along upper half of arc
-            let spawnX = donutX + cos(angle) * minuteArcRadius;
-            let spawnY = donutY + sin(angle) * minuteArcRadius;
-            minuteCircles.push(new Circle(spawnX, spawnY, minute_inner_scale, [200, 100, 100], 0.55));
-        }
+        let angle = random(TWO_PI);
+        let spawnX = donutX + cos(angle) * minuteArcRadius;
+        let spawnY = donutY + sin(angle) * minuteArcRadius;
+        minuteCircles.push(new Circle(spawnX, spawnY, minute_inner_scale, [200, 100, 100], 0.55));
     }
     
     // Spawn hours along arc between minute's outer and hour's inner radius
     let hourArcRadius = (minuteOuterRadius + hourInnerRadius) / 2;
     for (let i = 0; i < currentHour; i++) {
-        spawnStartTime = millis();
-        while (millis() - spawnStartTime < spawn_delay) {
-            canSpawn = false;
-        }
-        if (!canSpawn) {
-            let angle = random(PI, TWO_PI); // Random angle along upper half of arc
-            let spawnX = donutX + cos(angle) * hourArcRadius;
-            let spawnY = donutY + sin(angle) * hourArcRadius;
-            hourCircles.push(new Circle(spawnX, spawnY, hour_inner_scale, [255, 200, 0], 0.9));
-        }
+        let angle = random(TWO_PI);
+        let spawnX = donutX + cos(angle) * hourArcRadius;
+        let spawnY = donutY + sin(angle) * hourArcRadius;
+        hourCircles.push(new Circle(spawnX, spawnY, hour_inner_scale, [255, 200, 0], 0.9));
     }
     
     // Set lastSecond so we don't double-spawn the current second
@@ -440,10 +418,12 @@ function resetClock() {
     let minuteOuterRadius = windowWidth / minute_outer_scale;
     let hourInnerRadius = windowWidth / hour_inner_scale;
     
-    // Spawn seconds
+    // Spawn seconds along arc inside seconds ring
+    let secondArcRadius = secondInnerRadius / 2;
     for (let i = 0; i < currentSecond; i++) {
-        let spawnX = donutX + random(secondInnerRadius * -0.25, secondInnerRadius * 0.25);
-        let spawnY = donutY - random(secondInnerRadius * 0.3, secondInnerRadius * 0.5);
+        let angle = random(TWO_PI);
+        let spawnX = donutX + cos(angle) * secondArcRadius;
+        let spawnY = donutY + sin(angle) * secondArcRadius;
         secondsCircles.push(new Circle(spawnX, spawnY, second_inner_scale, [100, 150, 200], 1.0));
     }
     
@@ -763,8 +743,14 @@ function draw() {
 
     // At start of 12-hour cycle (midnight/noon), trigger clear animation for hours
     if (hr12 === 0) {
-        startClearAnimation('hour');
-        lastHour = hr12;
+        already_cleared = true;
+        if (!already_cleared) {
+            startClearAnimation('hour');
+            lastHour = hr12;
+            already_cleared = true;
+        }
+    } else {
+        already_cleared = false;
     }
     
     // Update and display all circles
