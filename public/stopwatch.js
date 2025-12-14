@@ -5,6 +5,71 @@ let hourCircles = [];
 let lastSecond = -1; // Track when we last created a circle
 let lastMinute = -1; // Track when we last created a minute circle
 let lastHour = -1; // Track when we last created an hour circle
+
+// Device orientation for gravity direction
+let gravityAngle = Math.PI / 2; // Default: gravity points down (90 degrees)
+let gyroSupported = false;
+
+// Initialize device orientation listener
+function initGyroscope() {
+    // Check if DeviceOrientationEvent is supported
+    if (typeof DeviceOrientationEvent !== 'undefined') {
+        // iOS 13+ requires permission request
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // We'll request permission on first user interaction
+            gyroSupported = 'needs-permission';
+        } else {
+            // Android and older iOS - just add the listener
+            window.addEventListener('deviceorientation', handleOrientation);
+            gyroSupported = true;
+        }
+    }
+}
+
+// Request permission for iOS devices (must be called from user gesture)
+function requestGyroPermission() {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    gyroSupported = true;
+                }
+            })
+            .catch(console.error);
+    }
+}
+
+// Handle device orientation changes
+function handleOrientation(event) {
+    // beta: front-to-back tilt (-180 to 180), gamma: left-to-right tilt (-90 to 90)
+    let beta = event.beta || 0;   // Forward/back tilt
+    let gamma = event.gamma || 0; // Left/right tilt
+    
+    // Convert device tilt to gravity angle
+    // When phone is upright (portrait), beta ~90, gamma ~0
+    // We want gravity to point "down" relative to device tilt
+    
+    // Clamp gamma to prevent extreme values
+    gamma = Math.max(-90, Math.min(90, gamma));
+    
+    // Convert to radians and calculate gravity direction
+    // gamma controls left/right gravity, beta controls if phone is tilted forward/back
+    let gammaRad = gamma * (Math.PI / 180);
+    let betaRad = beta * (Math.PI / 180);
+    
+    // Calculate gravity vector components
+    // When phone tilts right (gamma > 0), gravity should pull right
+    // When phone tilts forward (beta > 0 from upright 90°), gravity pulls down more
+    let gravityX = Math.sin(gammaRad);
+    let gravityY = Math.cos(gammaRad) * Math.sin(betaRad);
+    
+    // Normalize and clamp for stability
+    let magnitude = Math.sqrt(gravityX * gravityX + gravityY * gravityY);
+    if (magnitude > 0.1) {
+        gravityAngle = Math.atan2(gravityY, gravityX);
+    }
+}
 let second_inner_scale = 15;
 let second_outer_scale = 12;
 let minute_inner_scale = 20/3;
@@ -72,8 +137,10 @@ class Circle {
     }
     
     update(circleArray) {
-        // 1. Apply gravity to velocity
-        this.velocityY += this.getGravity();
+        // 1. Apply gravity based on device orientation
+        let gravity = this.getGravity();
+        this.velocityX += Math.cos(gravityAngle) * gravity;
+        this.velocityY += Math.sin(gravityAngle) * gravity;
         
         // Cap velocity to prevent tunneling
         let maxVel = this.getMaxVelocity();
@@ -86,21 +153,40 @@ class Circle {
         this.checkArcCollision();
         this.checkCircleCollision(circleArray);
         
-        // 5. Check collision with bottom of screen
+        // Check collision with all screen edges
         let radius = this.getRadius();
+        
+        // Bottom edge
         if (this.y + radius > windowHeight) {
             this.y = windowHeight - radius;
             this.velocityY *= -this.bounce;
             this.velocityX *= this.friction;
-            
-            // Stop if velocity is very small
-            if (abs(this.velocityY) < 0.5) {
-                this.velocityY = 0;
-            }
+            if (abs(this.velocityY) < 0.5) this.velocityY = 0;
         }
         
-        // Position is already updated by collision checks
-        // Velocity has been modified by collision responses
+        // Top edge
+        if (this.y - radius < 0) {
+            this.y = radius;
+            this.velocityY *= -this.bounce;
+            this.velocityX *= this.friction;
+            if (abs(this.velocityY) < 0.5) this.velocityY = 0;
+        }
+        
+        // Right edge
+        if (this.x + radius > windowWidth) {
+            this.x = windowWidth - radius;
+            this.velocityX *= -this.bounce;
+            this.velocityY *= this.friction;
+            if (abs(this.velocityX) < 0.5) this.velocityX = 0;
+        }
+        
+        // Left edge
+        if (this.x - radius < 0) {
+            this.x = radius;
+            this.velocityX *= -this.bounce;
+            this.velocityY *= this.friction;
+            if (abs(this.velocityX) < 0.5) this.velocityX = 0;
+        }
     }
     
     
@@ -209,6 +295,9 @@ class Circle {
 // setup() is called once at page-load
 function setup() {
     createCanvas(windowWidth, windowHeight); // make an HTML canvas element that fills the viewport
+    
+    // Initialize gyroscope for tilt-based gravity
+    initGyroscope();
     
     // Spawn circles based on current second (continuous through reload)
     let currentSecond = 0;
@@ -356,8 +445,22 @@ function keyReleased() {
     }
 }
 
+// Touch handler for mobile devices
+function touchStarted() {
+    // Request gyroscope permission on iOS (requires user gesture)
+    if (gyroSupported === 'needs-permission') {
+        requestGyroPermission();
+    }
+    return true; // Prevent default
+}
+
 // Spawn circle on click while holding 1, 2, or 3
 function mousePressed() {
+    // Request gyroscope permission on iOS (requires user gesture)
+    if (gyroSupported === 'needs-permission') {
+        requestGyroPermission();
+    }
+    
     // Check toolbar clicks first
     if (handleToolbarClick(mouseX, mouseY)) {
         return; // Click was handled by toolbar
@@ -451,6 +554,48 @@ function resetClock() {
     lastMinute = currentMinute;
     lastHour = currentHour;
     clearing = { second: false, minute: false, hour: false };
+}
+
+// Draw gravity direction indicator in corner
+function drawGravityIndicator() {
+    let indicatorX = 50;
+    let indicatorY = windowHeight - 50;
+    let arrowLength = 25;
+    let isDark = currentBg < 128;
+    
+    push();
+    translate(indicatorX, indicatorY);
+    
+    // Draw circle background
+    noStroke();
+    fill(isDark ? 60 : 200, 150);
+    ellipse(0, 0, 60, 60);
+    
+    // Draw arrow pointing in gravity direction
+    stroke(isDark ? 220 : 40);
+    strokeWeight(3);
+    let endX = Math.cos(gravityAngle) * arrowLength;
+    let endY = Math.sin(gravityAngle) * arrowLength;
+    line(0, 0, endX, endY);
+    
+    // Draw arrowhead
+    let headAngle = 0.5;
+    let headLength = 8;
+    line(endX, endY, 
+         endX - Math.cos(gravityAngle - headAngle) * headLength,
+         endY - Math.sin(gravityAngle - headAngle) * headLength);
+    line(endX, endY,
+         endX - Math.cos(gravityAngle + headAngle) * headLength,
+         endY - Math.sin(gravityAngle + headAngle) * headLength);
+    
+    // Label
+    noStroke();
+    fill(isDark ? 150 : 100);
+    textAlign(CENTER, TOP);
+    textSize(9);
+    text("GRAVITY", 0, 35);
+    
+    pop();
 }
 
 // Draw AM/PM indicator circle on clock edge
@@ -791,6 +936,11 @@ function draw() {
     
     // Draw AM/PM indicator circle on clock edge
     drawAMPMIndicator(isPM, hour_dims);
+    
+    // Draw gravity direction indicator (small arrow in corner)
+    if (gyroSupported === true) {
+        drawGravityIndicator();
+    }
     
     // Draw circle counts inside rings if enabled
     if (showNumbers) {
