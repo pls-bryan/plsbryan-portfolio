@@ -1,0 +1,130 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import {
+  maeBadgeConfig,
+  maeScaffoldViewBox,
+  maeSliceConfigs
+} from "../../data/maeScaffold";
+import "../../styles/mae.css";
+---
+
+<Layout title="MAE" description="Morningside Art Exchange">
+  <main class="mae-page mae-page--locked">
+    <div class="mae-page__shell">
+      <section class="mae-stage" aria-label="MAE layout scaffold">
+        <svg
+          class="mae-stage__svg"
+          viewBox={`0 0 ${maeScaffoldViewBox.width} ${maeScaffoldViewBox.height}`}
+          role="img"
+          aria-labelledby="mae-stage-title mae-stage-desc"
+        >
+          <title id="mae-stage-title">MAE website scaffold</title>
+          <desc id="mae-stage-desc">
+            Five angled panel links with a circular MAE home badge centered near the top.
+          </desc>
+
+          <defs>
+            <clipPath id="mae-badge-clip" clipPathUnits="userSpaceOnUse">
+              <circle
+                cx={maeBadgeConfig.cx}
+                cy={maeBadgeConfig.cy}
+                r={maeBadgeConfig.r}
+              ></circle>
+            </clipPath>
+            {
+              maeSliceConfigs.map((slice) => (
+                <clipPath id={`mae-clip-${slice.id}`} clipPathUnits="userSpaceOnUse">
+                  <path d={slice.path}></path>
+                </clipPath>
+              ))
+            }
+          </defs>
+
+          <rect
+            width={maeScaffoldViewBox.width}
+            height={maeScaffoldViewBox.height}
+            class="mae-stage__bg"
+          ></rect>
+
+          {
+            maeSliceConfigs.map((slice) => (
+              <image
+                href={slice.imageSrc}
+                x={slice.image.x}
+                y={slice.image.y}
+                width={slice.image.width}
+                height={slice.image.height}
+                preserveAspectRatio={slice.image.preserveAspectRatio ?? "xMidYMid slice"}
+                clip-path={`url(#mae-clip-${slice.id})`}
+              />
+            ))
+          }
+
+          <g class="mae-stage__links">
+            {
+              maeSliceConfigs.map((slice) => (
+                <a href={slice.href} aria-label={slice.label} class="mae-stage__link">
+                  <title>{slice.label}</title>
+                  <path class="mae-stage__link-hit" d={slice.path}></path>
+                  <path class="mae-stage__link-focus" d={slice.path}></path>
+                </a>
+              ))
+            }
+          </g>
+
+          <g class="mae-stage__labels" aria-hidden="true">
+            {
+              maeSliceConfigs.map((slice) => (
+                <text
+                  class="mae-stage__label"
+                  x={slice.text.x}
+                  y={slice.text.y}
+                  text-anchor={slice.text.textAnchor ?? "start"}
+                  transform={`rotate(${slice.text.rotation} ${slice.text.x} ${slice.text.y})`}
+                  style={`font-size:${slice.text.fontSize}px;letter-spacing:${slice.text.letterSpacing ?? "-0.03em"};`}
+                >
+                  {slice.label}
+                </text>
+              ))
+            }
+          </g>
+
+          <a href="/mae" aria-label="Home" class="mae-stage__link mae-stage__badge-link">
+            <title>Home</title>
+            <image
+              href={maeBadgeConfig.image.src}
+              x={maeBadgeConfig.image.x}
+              y={maeBadgeConfig.image.y}
+              width={maeBadgeConfig.image.width}
+              height={maeBadgeConfig.image.height}
+              preserveAspectRatio={maeBadgeConfig.image.preserveAspectRatio}
+              clip-path="url(#mae-badge-clip)"
+            />
+            <circle
+              class="mae-stage__link-hit"
+              cx={maeBadgeConfig.cx}
+              cy={maeBadgeConfig.cy}
+              r={maeBadgeConfig.r}
+            ></circle>
+            <circle
+              class="mae-stage__link-focus"
+              cx={maeBadgeConfig.cx}
+              cy={maeBadgeConfig.cy}
+              r={maeBadgeConfig.r}
+            ></circle>
+          </a>
+        </svg>
+      </section>
+
+      <div class="mae-copy">
+        <h1 class="mae-copy__title">Morningside Art Exchange.</h1>
+        <p class="mae-copy__body">
+          Founded in 2023, Morningside Art Exchange curates people-centered events
+          designed to build connections through shared experience, connect artists to
+          new target audiences, and create spaces oriented around joy, expression,
+          growth, vision, and inspiration.
+        </p>
+      </div>
+    </div>
+  </main>
+</Layout>

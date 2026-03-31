@@ -1,0 +1,354 @@
+---
+const pageTitle = 'How Is New York Growing?';
+const csvUrl = '/data/nyc_census_by_boro_2000-2010.csv';
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <link rel="icon" type="image/svg" href="/graphics/pls_logo_white.png" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
+      :root {
+        color-scheme: dark;
+        --bg: #070707;
+        --bg-soft: #0f0f0f;
+        --text: #f4f4f4;
+        --muted: #c9c9c9;
+        --accent: #14a66a;
+        --accent-light: #daf6e7;
+        --alert: #e4422d;
+        --map-stroke: #0a0a0a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 10% 10%, rgba(35, 35, 35, 0.6), transparent 40%),
+          radial-gradient(circle at 85% 15%, rgba(20, 166, 106, 0.25), transparent 50%),
+          radial-gradient(circle at 60% 85%, rgba(228, 66, 45, 0.2), transparent 55%),
+          var(--bg);
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+        display: grid;
+        grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+        gap: 36px;
+      }
+
+      h1 {
+        font-size: clamp(28px, 4vw, 40px);
+        margin: 0 0 12px;
+      }
+
+      .subtitle {
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--muted);
+        max-width: 320px;
+      }
+
+      .legend {
+        margin-top: 34px;
+        display: grid;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .legend-bar {
+        width: 70px;
+        height: 260px;
+        border-radius: 8px;
+        background: linear-gradient(180deg, #16a34a, #f6f6f6 50%, #ef3a24);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+      }
+
+      .legend-labels {
+        display: grid;
+        gap: 6px;
+        font-weight: 500;
+      }
+
+      .legend-labels span {
+        font-size: 20px;
+      }
+
+      .legend-labels .min {
+        color: #ffb3a6;
+      }
+
+      .legend-labels .max {
+        color: #a8f3cb;
+      }
+
+      .legend-title {
+        font-size: 18px;
+        letter-spacing: 0.08em;
+      }
+
+      .map-wrap {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .boro-shape {
+        stroke: var(--map-stroke);
+        stroke-width: 3px;
+        transition: fill 0.4s ease;
+      }
+
+      .borough-label {
+        font-size: 14px;
+        fill: #151515;
+        font-weight: 600;
+      }
+
+      .metric {
+        font-size: 12px;
+        fill: #1a1a1a;
+      }
+
+      .icon {
+        fill: none;
+        stroke: #4f4f4f;
+        stroke-width: 2;
+      }
+
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: right;
+        margin-top: 8px;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        .legend {
+          grid-template-columns: auto 1fr;
+          align-items: center;
+        }
+
+        .legend-bar {
+          height: 180px;
+        }
+
+        .note {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>{pageTitle}</h1>
+        <p class="subtitle">
+          Housing Growth Index (HGI) calculated by difference between housing growth and population growth
+          from 2000-2010. Higher percentages indicate that housing is growing faster than population.
+        </p>
+
+        <div class="legend">
+          <div class="legend-bar" aria-hidden="true"></div>
+          <div class="legend-labels">
+            <span class="max">3%</span>
+            <span class="legend-title">HGI</span>
+            <span class="min">-3%</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="map-wrap">
+        <svg viewBox="0 0 900 700" role="img" aria-label="Map of New York City boroughs colored by housing growth index">
+          <g class="borough" data-boro="Bronx">
+            <path class="boro-shape" id="bronx" d="M470 80 L645 80 L705 155 L642 230 L510 210 L455 165 Z" />
+          </g>
+          <g class="borough" data-boro="Manhattan">
+            <path class="boro-shape" id="manhattan" d="M410 160 L460 140 L475 190 L485 260 L480 360 L445 465 L410 445 L400 340 L405 250 Z" />
+          </g>
+          <g class="borough" data-boro="Queens">
+            <path class="boro-shape" id="queens" d="M505 240 L700 235 L825 330 L790 470 L610 530 L495 440 L520 330 Z" />
+          </g>
+          <g class="borough" data-boro="Brooklyn">
+            <path class="boro-shape" id="brooklyn" d="M420 355 L520 330 L560 455 L590 520 L510 610 L380 575 L350 470 Z" />
+          </g>
+          <g class="borough" data-boro="Staten_Island">
+            <path class="boro-shape" id="staten" d="M120 520 L250 500 L305 560 L265 640 L145 660 L90 600 Z" />
+          </g>
+
+          <g data-label="Bronx">
+            <g transform="translate(565 130)">
+              <path class="icon" d="M10 24 L10 6 L34 6 L34 24" />
+              <path class="icon" d="M6 6 L22 -8 L38 6" />
+            </g>
+            <g transform="translate(640 105)">
+              <circle class="icon" cx="8" cy="8" r="6" />
+              <path class="icon" d="M8 16 L8 36 M8 24 L0 24 M8 24 L16 24" />
+            </g>
+            <text class="metric" x="545" y="195" data-boro-text="Bronx" data-field="housing">+0.00%</text>
+            <text class="metric" x="630" y="195" data-boro-text="Bronx" data-field="population">+0.00%</text>
+          </g>
+
+          <g data-label="Manhattan">
+            <g transform="translate(370 210)">
+              <path class="icon" d="M10 24 L10 6 L34 6 L34 24" />
+              <path class="icon" d="M6 6 L22 -8 L38 6" />
+            </g>
+            <g transform="translate(450 188)">
+              <circle class="icon" cx="8" cy="8" r="6" />
+              <path class="icon" d="M8 16 L8 36 M8 24 L0 24 M8 24 L16 24" />
+            </g>
+            <text class="metric" x="355" y="275" data-boro-text="Manhattan" data-field="housing">+0.00%</text>
+            <text class="metric" x="440" y="275" data-boro-text="Manhattan" data-field="population">+0.00%</text>
+          </g>
+
+          <g data-label="Queens">
+            <g transform="translate(640 330)">
+              <path class="icon" d="M10 24 L10 6 L34 6 L34 24" />
+              <path class="icon" d="M6 6 L22 -8 L38 6" />
+            </g>
+            <g transform="translate(720 308)">
+              <circle class="icon" cx="8" cy="8" r="6" />
+              <path class="icon" d="M8 16 L8 36 M8 24 L0 24 M8 24 L16 24" />
+            </g>
+            <text class="metric" x="625" y="395" data-boro-text="Queens" data-field="housing">+0.00%</text>
+            <text class="metric" x="710" y="395" data-boro-text="Queens" data-field="population">+0.00%</text>
+          </g>
+
+          <g data-label="Brooklyn">
+            <g transform="translate(450 450)">
+              <path class="icon" d="M10 24 L10 6 L34 6 L34 24" />
+              <path class="icon" d="M6 6 L22 -8 L38 6" />
+            </g>
+            <g transform="translate(530 428)">
+              <circle class="icon" cx="8" cy="8" r="6" />
+              <path class="icon" d="M8 16 L8 36 M8 24 L0 24 M8 24 L16 24" />
+            </g>
+            <text class="metric" x="435" y="515" data-boro-text="Brooklyn" data-field="housing">+0.00%</text>
+            <text class="metric" x="520" y="515" data-boro-text="Brooklyn" data-field="population">+0.00%</text>
+          </g>
+
+          <g data-label="Staten_Island">
+            <g transform="translate(140 560)">
+              <path class="icon" d="M10 24 L10 6 L34 6 L34 24" />
+              <path class="icon" d="M6 6 L22 -8 L38 6" />
+            </g>
+            <g transform="translate(215 538)">
+              <circle class="icon" cx="8" cy="8" r="6" />
+              <path class="icon" d="M8 16 L8 36 M8 24 L0 24 M8 24 L16 24" />
+            </g>
+            <text class="metric" x="120" y="625" data-boro-text="Staten_Island" data-field="housing">+0.00%</text>
+            <text class="metric" x="205" y="625" data-boro-text="Staten_Island" data-field="population">+0.00%</text>
+          </g>
+        </svg>
+        <div class="note">*housing and population icons not necessarily to scale</div>
+      </section>
+    </main>
+
+    <script type="module">
+      const csvUrl = "{csvUrl}";
+
+      const parseCsv = (text) => {
+        const lines = text.trim().split(/\r?\n/);
+        const headers = lines.shift().split(",");
+        return lines.map((line) => {
+          const values = line.split(",");
+          return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+        });
+      };
+
+      const percentChange = (current, previous) => ((current - previous) / previous) * 100;
+
+      const formatPercent = (value) => {
+        const sign = value > 0 ? "+" : "";
+        return `${sign}${value.toFixed(2)}%`;
+      };
+
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+      const mix = (a, b, t) => Math.round(a + (b - a) * t);
+
+      const hgiColor = (value) => {
+        const min = -3;
+        const max = 3;
+        const t = (clamp(value, min, max) - min) / (max - min);
+        const mid = 0.5;
+        const neg = [239, 58, 36];
+        const neutral = [246, 246, 246];
+        const pos = [22, 163, 74];
+        if (t <= mid) {
+          const local = t / mid;
+          return `rgb(${mix(neg[0], neutral[0], local)}, ${mix(neg[1], neutral[1], local)}, ${mix(neg[2], neutral[2], local)})`;
+        }
+        const local = (t - mid) / mid;
+        return `rgb(${mix(neutral[0], pos[0], local)}, ${mix(neutral[1], pos[1], local)}, ${mix(neutral[2], pos[2], local)})`;
+      };
+
+      fetch(csvUrl)
+        .then((res) => res.text())
+        .then(parseCsv)
+        .then((rows) => {
+          const byBoro = new Map();
+          rows.forEach((row) => {
+            const population2010 = Number(row["2010_total_population"]);
+            const population2000 = Number(row["2000_total_population"]);
+            const housing2010 = Number(row["2010_total_households"]);
+            const housing2000 = Number(row["2000_total_households"]);
+            const populationGrowth = percentChange(population2010, population2000);
+            const housingGrowth = percentChange(housing2010, housing2000);
+            const hgi = housingGrowth - populationGrowth;
+
+            byBoro.set(row.Borough, {
+              populationGrowth,
+              housingGrowth,
+              hgi,
+            });
+          });
+
+          document.querySelectorAll(".borough").forEach((group) => {
+            const boro = group.dataset.boro;
+            const data = byBoro.get(boro);
+            if (!data) return;
+            const shape = group.querySelector(".boro-shape");
+            if (shape) {
+              shape.style.fill = hgiColor(data.hgi);
+            }
+          });
+
+          document.querySelectorAll("[data-boro-text]").forEach((node) => {
+            const boro = node.dataset.boroText;
+            const field = node.dataset.field;
+            const data = byBoro.get(boro);
+            if (!data) return;
+            if (field === "housing") node.textContent = formatPercent(data.housingGrowth);
+            if (field === "population") node.textContent = formatPercent(data.populationGrowth);
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to load CSV", error);
+        });
+    </script>
+  </body>
+</html>

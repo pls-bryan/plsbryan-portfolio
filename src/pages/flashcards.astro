@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" class="flashcards-page">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mandarin Flashcards</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" type="image/svg" href="/graphics/pls_logo_white.png" />
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro/dist/index.js" defer></script>
+    <script src="/flashcards.js" defer></script>
+  </head>
+  <body>
+    <main class="flashcards-main">
+      <section class="flashcards-hero">
+        <p class="flashcards-kicker">Mandarin Study Deck</p>
+        <h1>Paste. Generate. Flip.</h1>
+        <p class="flashcards-subtitle">
+          One card per line. Use <span>|</span>, a tab, or a dash to separate front and back.
+          Example: <span>wo3 ai4 ni3 | 我爱你</span>
+        </p>
+      </section>
+
+      <section class="flashcards-layout">
+        <div class="flashcards-input">
+          <label for="flashcard-input">Deck input</label>
+          <textarea id="flashcard-input" rows="10">
+ni hao | 你好
+xue2 xi2 - 学习
+zao shang | 早上
+chi fan | 吃饭
+wo3 ai4 ni3 | 我爱你
+          </textarea>
+          <div class="flashcards-actions">
+            <button class="flashcards-button primary" id="generate-cards" type="button">Generate set</button>
+            <button class="flashcards-button" id="auto-pinyin" type="button">Auto-generate pinyin</button>
+            <div class="flashcards-toggle" role="group" aria-label="Flashcard face mode">
+              <button class="flashcards-button toggle-button is-active" id="show-hanzi" type="button" aria-pressed="true">
+                Hanzi front
+              </button>
+              <button class="flashcards-button toggle-button" id="show-pinyin" type="button" aria-pressed="false">
+                Pinyin front
+              </button>
+            </div>
+            <button class="flashcards-button" id="shuffle-cards" type="button">Shuffle</button>
+            <button class="flashcards-button" id="reset-cards" type="button">Reset flip</button>
+          </div>
+          <p class="flashcards-tip">
+            Tip: iOS Live Text, Google Lens, or Notes OCR can copy a vocab sheet into this box. Auto-generate uses pinyin-pro.
+          </p>
+        </div>
+
+        <div class="flashcards-stage">
+          <div class="flashcards-toolbar">
+            <button class="flashcards-button" id="toggle-focus" type="button">Enter focus mode</button>
+          </div>
+          <div class="flashcards-nav">
+            <button class="nav-button" id="prev-card" type="button" aria-label="Previous card">
+              <img src="/graphics/left_button.svg" alt="" />
+            </button>
+            <button class="nav-button" id="next-card" type="button" aria-label="Next card">
+              <img src="/graphics/right_button.svg" alt="" />
+            </button>
+          </div>
+
+          <div class="flashcard-shell">
+            <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-pressed="false">
+              <div class="flashcard-face front" id="card-front">你好</div>
+              <div class="flashcard-face back" id="card-back">ni hao</div>
+            </div>
+            <div class="flashcard-complete" id="flashcard-complete" aria-live="polite">
+              <h2>Deck complete</h2>
+              <p>You viewed every card in this set.</p>
+              <div class="flashcards-actions">
+                <button class="flashcards-button primary" id="restart-cards" type="button">Start over</button>
+                <button class="flashcards-button" id="restart-shuffle" type="button">Start over + shuffle</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flashcards-meta">
+            <p id="card-status">Tap the card to flip.</p>
+            <p id="card-counter">1 / 1</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

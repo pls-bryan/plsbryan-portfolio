@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light dark;
+  --mae-page-bg: #ffffff;
+  --mae-text: #111111;
+  --mae-accent: #ea5a1d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mae-page-bg: #050505;
+    --mae-text: #f5f5f5;
+  }
+}
+
+.mae-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--mae-page-bg);
+  color: var(--mae-text);
+  overflow: hidden;
+}
+
+.mae-page--locked {
+  height: 100vh;
+}
+
+.mae-page__shell {
+  width: 100%;
+  padding-top: clamp(1rem, 2vw, 2.5rem);
+}
+
+.mae-stage {
+  width: 100vw;
+  margin: 0;
+}
+
+.mae-stage__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mae-stage__bg {
+  fill: var(--mae-page-bg);
+}
+
+.mae-stage__link {
+  cursor: pointer;
+  outline: none;
+}
+
+.mae-stage__link-hit {
+  fill: rgba(255, 255, 255, 0.001);
+}
+
+.mae-stage__link-focus {
+  fill: none;
+  stroke: rgba(234, 90, 29, 0.95);
+  stroke-width: 6px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.mae-stage__link:hover .mae-stage__link-focus,
+.mae-stage__link:focus-visible .mae-stage__link-focus {
+  opacity: 1;
+}
+
+.mae-stage__badge-link image {
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 140ms ease;
+}
+
+.mae-stage__badge-link:hover .mae-stage__link-focus,
+.mae-stage__badge-link:focus-visible .mae-stage__link-focus {
+  opacity: 0;
+}
+
+.mae-stage__badge-link:hover image,
+.mae-stage__badge-link:focus-visible image {
+  transform: scale(0.96);
+}
+
+.mae-stage__labels {
+  pointer-events: none;
+}
+
+.mae-stage__label {
+  fill: var(--mae-accent);
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mae-copy {
+  width: min(78vw, 72rem);
+  padding: 1rem 1.52rem 2rem;
+}
+
+.mae-copy__title {
+  margin: 0;
+  color: var(--mae-accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 4vw, 5.5rem);
+  font-weight: 400;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+
+.mae-copy__body {
+  max-width: 100%;
+  margin: 0.3rem 0 0;
+  color: var(--mae-accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.05rem, 1.4vw, 1.7rem);
+  line-height: 1.02;
+}
+
+.mae-blank {
+  min-height: 100vh;
+  padding: 2rem 0.75rem;
+  background: var(--mae-page-bg);
+  color: var(--mae-text);
+}
+
+.mae-blank h1 {
+  margin: 0;
+  color: var(--mae-accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 400;
+}
