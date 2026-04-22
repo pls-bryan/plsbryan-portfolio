@@ -1,0 +1,508 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+
+const contractorColors = {
+  'Northrop Grumman': '#f5df2e',
+  Boeing: '#02a9df',
+  'Lockheed Martin': '#16a35f',
+  'Aerojet Rocketdyne': '#e76f33',
+  'Teledyne Brown Engineering': '#d82f84',
+};
+
+const contractorKey = [
+  ['Northrop Grumman', contractorColors['Northrop Grumman']],
+  ['Boeing', contractorColors.Boeing],
+  ['Lockheed Martin', contractorColors['Lockheed Martin']],
+  ['Aerojet Rocketdyne', contractorColors['Aerojet Rocketdyne']],
+  ['Teledyne Brown Engineering', contractorColors['Teledyne Brown Engineering']],
+];
+
+const partInfo = {
+  'launch-abort-sytem': {
+    part: 'Launch Abort System',
+    contractor: 'Northrop Grumman',
+  },
+  'crew-module': {
+    part: 'Crew Module',
+    contractor: 'Lockheed Martin',
+    note: 'Aerojet Rocketdyne supplies auxiliary engines, reaction control thrusters, and helium tanks.',
+  },
+  'encapsulated-service-module-panels': {
+    part: 'Encapsulated Service Module Panels',
+    contractor: 'Lockheed Martin',
+  },
+  'spacecraft-adpater': {
+    part: 'Spacecraft Adapter',
+    contractor: 'Teledyne Brown Engineering',
+    note: 'Also associated with Jacobs ESSCA and AMRO Fabricating Corp.',
+  },
+  'orion-stage-adapter': {
+    part: 'Orion Stage Adapter',
+    contractor: 'Teledyne Brown Engineering',
+    note: 'Also associated with Jacobs ESSCA and AMRO Fabricating Corp.',
+  },
+  'interim-cryogenic-propulsion-stage': {
+    part: 'Interim Cryogenic Propulsion Stage',
+    contractor: 'Boeing',
+    note: 'Built through United Launch Alliance, a Lockheed Martin and Boeing joint venture.',
+  },
+  'launch-vehicle-stage-adapter': {
+    part: 'Launch Vehicle Stage Adapter',
+    contractor: 'Teledyne Brown Engineering',
+  },
+  'forward-skirt': {
+    part: 'Front Skirt',
+    contractor: 'Boeing',
+  },
+  'liquid-oxygen-tank': {
+    part: 'Liquid Oxygen Tank',
+    contractor: 'Boeing',
+  },
+  intertank: {
+    part: 'Intertank',
+    contractor: 'Boeing',
+  },
+  'liquid-hydrogen-tank': {
+    part: 'Liquid Hydrogen Tank',
+    contractor: 'Boeing',
+    note: 'Air Products is also listed for this tank.',
+  },
+  'engine-section': {
+    part: 'Engine Section',
+    contractor: 'Boeing',
+  },
+  'rs25-engine-2': {
+    part: 'RS-25 Engines',
+    contractor: 'Aerojet Rocketdyne',
+  },
+  'forward-assembly': {
+    part: 'Forward Assembly',
+    contractor: 'Northrop Grumman',
+  },
+  'foward-skirt-avionics': {
+    part: 'Forward Skirt Avionics',
+    contractor: 'Northrop Grumman',
+  },
+  'forward-segment-with-igniter': {
+    part: 'Forward Segment with Igniter',
+    contractor: 'Northrop Grumman',
+  },
+  'center-forward-segment': {
+    part: 'Center Forward Segment',
+    contractor: 'Northrop Grumman',
+  },
+  'center-center-segment': {
+    part: 'Center Center Segment',
+    contractor: 'Northrop Grumman',
+  },
+  'center-aft-segment': {
+    part: 'Center Aft Segment',
+    contractor: 'Northrop Grumman',
+  },
+  'aft-section': {
+    part: 'Aft Segment',
+    contractor: 'Northrop Grumman',
+  },
+  'solid-rocket-booster': {
+    part: 'Solid Rocket Booster',
+    contractor: 'Northrop Grumman',
+  },
+  'aft-skirt': {
+    part: 'Aft Skirt',
+    contractor: 'Northrop Grumman',
+  },
+  'core-stage-attach-ring': {
+    part: 'Core Stage Attach Ring',
+    contractor: 'Boeing',
+  },
+  nozzle: {
+    part: 'Nozzle',
+    contractor: 'Northrop Grumman',
+  },
+};
+
+function escapeAttr(value) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function lookupPart(id) {
+  if (partInfo[id]) return partInfo[id];
+  if (id.endsWith('-2') && partInfo[id.slice(0, -2)]) return partInfo[id.slice(0, -2)];
+  return null;
+}
+
+const svgPath = path.join(process.cwd(), 'public', 'graphics', 'sls-diagram-02.svg');
+const rawSvg = fs.readFileSync(svgPath, 'utf8');
+const rocketSvg = rawSvg
+  .replace('<svg ', '<svg class="rocket-svg" role="img" aria-labelledby="rocket-title rocket-desc" ')
+  .replace(
+    '<g id="Layer_2"',
+    '<title id="rocket-title">Artemis II contractor rocket diagram</title><desc id="rocket-desc">Interactive SLS and Orion diagram colored by contractor.</desc><g id="Layer_2"',
+  )
+  .replace(/<(path|polyline|polygon)\b([^>]*?)(\s*\/?)>/g, (match, tag, attrs, closing) => {
+    const idMatch = attrs.match(/\bid="([^"]+)"/);
+    if (!idMatch) return match;
+
+    const info = lookupPart(idMatch[1]);
+    if (!info) return match;
+
+    const color = contractorColors[info.contractor];
+    const title = `${info.part}: ${info.contractor}`;
+    const cleanAttrs = attrs.replace(/\sclass="[^"]*"/, '');
+
+    return `<${tag}${cleanAttrs} class="artemis-part" tabindex="0" role="button" style="--part-fill: ${color}" data-part="${escapeAttr(info.part)}" data-contractor="${escapeAttr(info.contractor)}" data-note="${escapeAttr(info.note ?? '')}" aria-label="${escapeAttr(title)}"${closing}>`;
+  });
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Artemis II Contractors</title>
+    <style is:global>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        --ink: #141414;
+        --muted: #62666d;
+        --line: #d9d9d9;
+        --paper: #f7f7f4;
+        --panel: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--paper);
+        color: var(--ink);
+      }
+
+      body {
+        overflow-x: hidden;
+      }
+
+      .page {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(250px, 330px) 1fr;
+      }
+
+      .panel {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 28px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 4.25rem);
+        line-height: 0.92;
+        letter-spacing: 0;
+        max-width: 6ch;
+      }
+
+      .deck {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.45;
+        max-width: 24rem;
+      }
+
+      .key {
+        display: grid;
+        gap: 10px;
+      }
+
+      .key h2,
+      .details h2 {
+        margin: 0 0 4px;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .key-row {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.95rem;
+      }
+
+      .swatch {
+        width: 18px;
+        height: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.28);
+      }
+
+      .details {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+      }
+
+      .details-name {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1.2;
+      }
+
+      .details-contractor {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .details-note {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+
+      .stage {
+        min-height: 100vh;
+        padding: clamp(24px, 4vw, 52px);
+        display: grid;
+        place-items: center;
+      }
+
+      .rocket-shell {
+        width: min(100%, 620px);
+        min-height: min(88vh, 900px);
+        display: grid;
+        place-items: center;
+      }
+
+      .rocket-svg {
+        width: min(100%, 430px);
+        height: min(88vh, 900px);
+        display: block;
+        overflow: visible;
+      }
+
+      .rocket-svg .artemis-part {
+        fill: var(--part-fill);
+        stroke: #1f1f1f;
+        stroke-width: 0.72px;
+        vector-effect: non-scaling-stroke;
+        cursor: crosshair;
+        transition:
+          filter 160ms ease,
+          opacity 160ms ease,
+          stroke-width 160ms ease;
+      }
+
+      .rocket-svg .artemis-part:hover,
+      .rocket-svg .artemis-part:focus-visible,
+      .rocket-svg .artemis-part.is-active {
+        filter: brightness(1.08) saturate(1.14);
+        opacity: 1;
+        stroke: #000;
+        stroke-width: 1.8px;
+        outline: none;
+      }
+
+      .rocket-svg:has(.artemis-part:hover) .artemis-part:not(:hover),
+      .rocket-svg:has(.artemis-part:focus-visible) .artemis-part:not(:focus-visible) {
+        opacity: 0.66;
+      }
+
+      .tooltip {
+        position: fixed;
+        z-index: 20;
+        left: 0;
+        top: 0;
+        max-width: min(280px, calc(100vw - 28px));
+        padding: 10px 12px;
+        border: 1px solid rgba(0, 0, 0, 0.18);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate3d(12px, 12px, 0);
+        transition: opacity 120ms ease;
+      }
+
+      .tooltip.is-visible {
+        opacity: 1;
+      }
+
+      .tooltip strong {
+        display: block;
+        font-size: 0.92rem;
+        line-height: 1.2;
+      }
+
+      .tooltip span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.3;
+      }
+
+      @media (max-width: 780px) {
+        .page {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          position: static;
+          height: auto;
+          min-height: 0;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding: 22px;
+        }
+
+        h1 {
+          max-width: none;
+          font-size: 2.4rem;
+        }
+
+        .details {
+          margin-top: 0;
+        }
+
+        .stage {
+          min-height: auto;
+          padding: 22px 18px 36px;
+        }
+
+        .rocket-shell {
+          min-height: auto;
+        }
+
+        .rocket-svg {
+          width: min(100%, 360px);
+          height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <aside class="panel" aria-label="Artemis II contractor key">
+        <div>
+          <h1>Artemis II</h1>
+          <p class="deck">SLS and Orion contractors mapped to the rocket structure.</p>
+        </div>
+
+        <section class="key" aria-labelledby="key-title">
+          <h2 id="key-title">Key</h2>
+          {
+            contractorKey.map(([name, color]) => (
+              <div class="key-row">
+                <span class="swatch" style={`background: ${color}`} aria-hidden="true" />
+                <span>{name}</span>
+              </div>
+            ))
+          }
+        </section>
+
+        <section class="details" aria-live="polite">
+          <h2>Part</h2>
+          <p class="details-name" data-details-name>Rocket component</p>
+          <p class="details-contractor" data-details-contractor>Hover or focus a colored region.</p>
+          <p class="details-note" data-details-note></p>
+        </section>
+      </aside>
+
+      <section class="stage" aria-label="Interactive rocket diagram">
+        <div class="rocket-shell" set:html={rocketSvg} />
+      </section>
+    </main>
+
+    <div class="tooltip" data-tooltip aria-hidden="true">
+      <strong data-tooltip-part></strong>
+      <span data-tooltip-contractor></span>
+    </div>
+
+    <script>
+      const parts = Array.from(document.querySelectorAll('.artemis-part'));
+      const tooltip = document.querySelector('[data-tooltip]');
+      const tooltipPart = document.querySelector('[data-tooltip-part]');
+      const tooltipContractor = document.querySelector('[data-tooltip-contractor]');
+      const detailsName = document.querySelector('[data-details-name]');
+      const detailsContractor = document.querySelector('[data-details-contractor]');
+      const detailsNote = document.querySelector('[data-details-note]');
+
+      function setContent(target) {
+        const part = target.dataset.part;
+        const contractor = target.dataset.contractor;
+        const note = target.dataset.note;
+
+        tooltipPart.textContent = part;
+        tooltipContractor.textContent = contractor;
+        detailsName.textContent = part;
+        detailsContractor.textContent = contractor;
+        detailsNote.textContent = note || '';
+      }
+
+      function showTooltip(target) {
+        setContent(target);
+        tooltip.classList.add('is-visible');
+        tooltip.setAttribute('aria-hidden', 'false');
+      }
+
+      function hideTooltip() {
+        tooltip.classList.remove('is-visible');
+        tooltip.setAttribute('aria-hidden', 'true');
+      }
+
+      function moveTooltip(event) {
+        const offset = 14;
+        const rect = tooltip.getBoundingClientRect();
+        let left = event.clientX + offset;
+        let top = event.clientY + offset;
+
+        if (left + rect.width > window.innerWidth - 10) {
+          left = event.clientX - rect.width - offset;
+        }
+
+        if (top + rect.height > window.innerHeight - 10) {
+          top = event.clientY - rect.height - offset;
+        }
+
+        tooltip.style.transform = `translate3d(${Math.max(10, left)}px, ${Math.max(10, top)}px, 0)`;
+      }
+
+      parts.forEach((part) => {
+        part.addEventListener('pointerenter', (event) => {
+          showTooltip(part);
+          moveTooltip(event);
+        });
+
+        part.addEventListener('pointermove', moveTooltip);
+        part.addEventListener('pointerleave', hideTooltip);
+
+        part.addEventListener('focus', () => {
+          setContent(part);
+        });
+
+        part.addEventListener('click', () => {
+          parts.forEach((item) => item.classList.remove('is-active'));
+          part.classList.add('is-active');
+          setContent(part);
+        });
+      });
+    </script>
+  </body>
+</html>
