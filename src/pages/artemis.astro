@@ -261,8 +261,10 @@ const priceBibliography = [
   },
 ];
 
-const artemisHiddenParts = new Set(['solid-rocket-booster', 'foward-skirt-avionics', 'nozzle']);
-const apolloHiddenParts = new Set();
+const artemisHiddenPartIds = new Set(['solid-rocket-booster']);
+const artemisHiddenPartGroups = new Set(['foward-skirt-avionics', 'nozzle']);
+const apolloHiddenPartIds = new Set();
+const apolloHiddenPartGroups = new Set();
 
 const artemisParts = {
   'launch-abort-sytem': {
@@ -540,7 +542,8 @@ const rockets = [
     title: 'Artemis II contractor rocket diagram',
     desc: 'Interactive SLS and Orion diagram colored by contractor.',
     svgPath: path.join(process.cwd(), 'public', 'graphics', 'sls-diagram-02.svg'),
-    hiddenParts: artemisHiddenParts,
+    hiddenPartIds: artemisHiddenPartIds,
+    hiddenPartGroups: artemisHiddenPartGroups,
     parts: artemisParts,
   },
   {
@@ -549,7 +552,8 @@ const rockets = [
     title: 'Apollo Saturn V contractor rocket diagram',
     desc: 'Interactive Saturn V diagram colored by contractor and legacy company lineage.',
     svgPath: path.join(process.cwd(), 'public', 'graphics', 'apollo', 'saturn-v-diagram-01.svg'),
-    hiddenParts: apolloHiddenParts,
+    hiddenPartIds: apolloHiddenPartIds,
+    hiddenPartGroups: apolloHiddenPartGroups,
     parts: apolloParts,
   },
 ];
@@ -564,6 +568,10 @@ function normalizeId(id) {
 
 function lookupPart(id, partInfo) {
   return partInfo[id] ?? partInfo[normalizeId(id)] ?? null;
+}
+
+function isHiddenPart(rocket, id) {
+  return rocket.hiddenPartIds.has(id) || rocket.hiddenPartGroups.has(normalizeId(id));
 }
 
 function buildNote(info) {
@@ -640,7 +648,7 @@ function renderRocketSvg(rocket) {
     )
     .replace(/<g\b([^>]*\bid="([^"]+)"[^>]*)>/g, (match, attrs, id) => {
       if (id === 'Layer_2') return match;
-      if (rocket.hiddenParts.has(id) || rocket.hiddenParts.has(normalizeId(id))) {
+      if (isHiddenPart(rocket, id)) {
         return match;
       }
 
@@ -661,7 +669,7 @@ function renderRocketSvg(rocket) {
       if (!idMatch) return match;
 
       const id = idMatch[1];
-      if (rocket.hiddenParts.has(id) || rocket.hiddenParts.has(normalizeId(id))) {
+      if (isHiddenPart(rocket, id)) {
         return '';
       }
 
