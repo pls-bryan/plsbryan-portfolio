@@ -1,158 +1,688 @@
 ---
 import fs from 'node:fs';
 import path from 'node:path';
+import AstronautGrid from '../components/artemis/AstronautGrid.astro';
+import AstronautSankey from '../components/artemis/AstronautSankey.astro';
 
-const contractorColors = {
-  'Northrop Grumman': '#f5df2e',
-  Boeing: '#02a9df',
-  'Lockheed Martin': '#16a35f',
-  'Aerojet Rocketdyne': '#e76f33',
-  'Teledyne Brown Engineering': '#d82f84',
+const contractorStyles = {
+  'Northrop Grumman': { color: '#f5df2e' },
+  Boeing: { color: '#02a9df' },
+  'Lockheed Martin': { color: '#16a35f' },
+  'Aerojet Rocketdyne': { color: '#e76f33' },
+  'Teledyne Brown Engineering': { color: '#d82f84' },
+  IBM: { color: '#6a4cff' },
+  'Lockheed Propulsion Co.': {
+    color: '#7acb98',
+    mergedInto: 'Lockheed Martin',
+  },
+  'North American Aviation': {
+    color: '#8ad5f2',
+    mergedInto: 'Boeing',
+  },
+  'Douglas Aircraft': {
+    color: '#63c5ea',
+    mergedInto: 'Boeing',
+  },
+  Rocketdyne: {
+    color: '#f2a56e',
+    mergedInto: 'Aerojet Rocketdyne',
+  },
 };
 
-const contractorKey = [
-  ['Northrop Grumman', contractorColors['Northrop Grumman']],
-  ['Boeing', contractorColors.Boeing],
-  ['Lockheed Martin', contractorColors['Lockheed Martin']],
-  ['Aerojet Rocketdyne', contractorColors['Aerojet Rocketdyne']],
-  ['Teledyne Brown Engineering', contractorColors['Teledyne Brown Engineering']],
+const contractorKeyOrder = [
+  'Northrop Grumman',
+  'Boeing',
+  'North American Aviation',
+  'Douglas Aircraft',
+  'Lockheed Martin',
+  'Lockheed Propulsion Co.',
+  'Aerojet Rocketdyne',
+  'Rocketdyne',
+  'Teledyne Brown Engineering',
+  'IBM',
 ];
 
-const partInfo = {
+const contractorKey = contractorKeyOrder.reduce((groups, name) => {
+  const item = { name, ...contractorStyles[name] };
+
+  if (item.mergedInto) {
+    const parentGroup = groups.find((group) => group.name === item.mergedInto);
+    if (parentGroup) {
+      parentGroup.children.push(item);
+      return groups;
+    }
+  }
+
+  groups.push({ ...item, children: [] });
+  return groups;
+}, []);
+
+const priceGroups = {
+  'orion-artemis-ii': {
+    amount: 2200000000,
+    label: '$2.2B',
+    title: 'Artemis II Orion completion cost',
+    note: 'NASA OIG projected an additional $2.2B between FY2020 and FY2023 to complete Orion development for Artemis II. Used here as a shared Artemis II Orion hardware proxy.',
+    sourceKey: 'orion-oig',
+  },
+  'core-stage': {
+    amount: 9200000000,
+    label: '$9.2B',
+    title: 'SLS stages contract value',
+    note: 'NASA OIG lists the Boeing stages contract at $9.2B covering two core stages, one exploration upper stage, and test articles. Used here as a shared core-stage proxy.',
+    sourceKey: 'sls-contracts-oig',
+  },
+  'rs25-cluster': {
+    amount: 397800000,
+    label: '$397.8M',
+    title: '4-engine RS-25 set',
+    note: 'Derived from NASA’s $1.79B contract for 18 RS-25 engines, or about $99.4M each. Artemis II flies with four engines.',
+    sourceKey: 'rs25-contract',
+  },
+  boosters: {
+    amount: 4300000000,
+    label: '$4.3B',
+    title: 'SLS booster contract value',
+    note: 'NASA OIG lists the Northrop Grumman booster contract at $4.3B to produce 35 booster segments and upgrade future booster hardware. Used here as a shared booster-system proxy.',
+    sourceKey: 'sls-contracts-oig',
+  },
+  icps: {
+    amount: 954400000,
+    label: '$954.4M',
+    title: 'ICPS contract value',
+    note: 'NASA OIG lists the ICPS contract at $954.4M for three stages, one structural test article, and flight software. Used here as the ICPS program proxy.',
+    sourceKey: 'sls-contracts-oig',
+  },
+  lvsa: {
+    amount: 60000000,
+    label: '$60M',
+    title: 'LVSA contract action',
+    note: 'NASA selected Teledyne Brown Engineering under a $60M contract action to design, build, test, evaluate, and certify the launch vehicle stage adapter assembly plus a structural test article and two flight units.',
+    sourceKey: 'lvsa-contract',
+  },
+  'orion-stage-adapter-estimate': {
+    amount: 4400000,
+    label: '$4.4M (est.)',
+    title: 'Estimated Orion stage adapter value',
+    note: 'Estimated from NASA sources by scaling the $60M LVSA contract action against the published OSA and LVSA geometries. This is an inferred estimate, not a NASA-published standalone price.',
+    sourceKey: 'orion-stage-adapter-estimate',
+    estimated: true,
+  },
+};
+
+const apolloCpi1969 = 36.7;
+const apolloCpi2025 = 324.122;
+const apolloInflationFactor = apolloCpi2025 / apolloCpi1969;
+
+const apolloMissionCosts2025 = {
+  csm: Math.round(55000000 * apolloInflationFactor),
+  lm: Math.round(40000000 * apolloInflationFactor),
+  saturnV: Math.round(185000000 * apolloInflationFactor),
+};
+
+Object.assign(priceGroups, {
+  'apollo-csm': {
+    amount: apolloMissionCosts2025.csm,
+    label: '$485.8M',
+    title: 'Apollo command/service module mission cost proxy',
+    note: 'Based on NASA’s Apollo 11-era mission cost table, which lists the Apollo Command & Service Module at $55M in 1969-era dollars. Inflation-adjusted to November 2025 dollars using BLS CPI-U.',
+    sourceKey: 'apollo-mission-costs',
+  },
+  'apollo-lm': {
+    amount: apolloMissionCosts2025.lm,
+    label: '$353.5M',
+    title: 'Apollo lunar module mission cost proxy',
+    note: 'Based on NASA’s Apollo 11-era mission cost table, which lists the Lunar Module at $40M in 1969-era dollars. Inflation-adjusted to November 2025 dollars using BLS CPI-U.',
+    sourceKey: 'apollo-mission-costs',
+  },
+  'apollo-saturn-v': {
+    amount: apolloMissionCosts2025.saturnV,
+    label: '$1.63B',
+    title: 'Apollo Saturn V mission cost proxy',
+    note: 'Based on NASA’s Apollo 11-era mission cost table, which lists the Saturn V launch vehicle at $185M in 1969-era dollars. Inflation-adjusted to November 2025 dollars using BLS CPI-U. Applied as a shared launch-vehicle proxy where NASA mission-cost reporting is vehicle-level rather than stage-by-stage unit pricing.',
+    sourceKey: 'apollo-mission-costs',
+  },
+});
+
+const priceBibliography = [
+  {
+    key: 'orion-oig',
+    title: 'NASA OIG: NASA’s Management of the Orion Multi-Purpose Crew Vehicle Program (IG-20-018)',
+    url: 'https://oig.nasa.gov/wp-content/uploads/2024/02/IG-20-018.pdf',
+    note: 'Used for Orion component structure and the $2.2B Artemis II Orion completion estimate.',
+  },
+  {
+    key: 'sls-contracts-oig',
+    title: 'NASA OIG: NASA’s Management of the Artemis Missions (IG-22-003), Appendix D',
+    url: 'https://oig.nasa.gov/wp-content/uploads/2024/02/ig-22-003.pdf',
+    note: 'Used for SLS contract values covering Boeing stages, ICPS, and Northrop booster hardware.',
+  },
+  {
+    key: 'rs25-contract',
+    title: 'NASA news release: NASA Commits to Future Artemis Missions with More SLS Rocket Engines',
+    url: 'https://www.nasa.gov/news-release/nasa-commits-to-future-artemis-missions-with-more-sls-rocket-engines/',
+    note: 'Used to derive the per-engine RS-25 price proxy from the $1.79B / 18-engine contract.',
+  },
+  {
+    key: 'lvsa-contract',
+    title: 'NASA contract release: NASA Selects Space Launch System Adapter Hardware Manufacturer',
+    url: 'https://www.nasa.gov/news-release/nasa-selects-space-launch-system-adapter-hardware-manufacturer/',
+    note: 'Used for the $60M launch vehicle stage adapter contract action.',
+  },
+  {
+    key: 'orion-components',
+    title: 'NASA Orion reference: Spacecraft Components',
+    url: 'https://www.nasa.gov/reference/spacecraft-components/',
+    note: 'Used to align Orion component names in the SVG with NASA’s current component breakdown.',
+  },
+  {
+    key: 'core-stage-reference',
+    title: 'NASA SLS reference: Core Stage',
+    url: 'https://www.nasa.gov/reference/sls-space-launch-system-core-stage',
+    note: 'Used for core stage component functions including tanks, intertank, engine section, and forward skirt.',
+  },
+  {
+    key: 'booster-reference',
+    title: 'NASA SLS reference: Solid Rocket Booster',
+    url: 'https://www.nasa.gov/reference/sls-space-launch-system-solid-rocket-booster/',
+    note: 'Used for booster component functions including the forward skirt, aft skirt, avionics, motor segments, and nozzle control roles.',
+  },
+  {
+    key: 'booster-fabrication',
+    title: 'NASA reference: Booster Fabrication Facility',
+    url: 'https://www.nasa.gov/reference/nasas-booster-fabrication-facility/',
+    note: 'Used for detailed descriptions of the booster forward assembly, aft skirt assembly, and thrust vector control hardware.',
+  },
+  {
+    key: 'icps-reference',
+    title: 'NASA SLS reference: Interim Cryogenic Propulsion Stage',
+    url: 'https://www.nasa.gov/reference/space-launch-system-interim-cryogenic-propulsion-stage-icps/',
+    note: 'Used for the ICPS role and placement in the Artemis launch stack.',
+  },
+  {
+    key: 'lvsa-reference',
+    title: 'NASA SLS reference: Launch Vehicle Stage Adapter',
+    url: 'https://www.nasa.gov/reference/space-launch-system-launch-vehicle-stage-adapter-lvsa/',
+    note: 'Used for the LVSA structural and protective role between the core stage and ICPS.',
+  },
+  {
+    key: 'orion-stage-adapter',
+    title: 'NASA image article: NASA Assembles Artemis II Orion Stage Adapter',
+    url: 'https://www.nasa.gov/image-article/nasa-assembles-artemis-ii-orion-stage-adapter-2/',
+    note: 'Used to verify the Orion stage adapter role; reviewed material did not include an isolated NASA-published price for this hardware.',
+  },
+  {
+    key: 'orion-stage-adapter-estimate',
+    title: 'Estimate method: NASA OSA factsheet + NASA LVSA contract release',
+    url: 'https://www.nasa.gov/reference/sls-space-launch-system-orion-stage-adapter/',
+    note: 'Estimate uses the NASA-published OSA dimensions together with the $60M NASA LVSA contract action and LVSA published dimensions as a comparable Marshall-built adapter proxy. This is an inference from NASA sources.',
+  },
+  {
+    key: 'apollo-mission-costs',
+    title: 'NASA historical Apollo mission cost table',
+    url: 'https://ntrs.nasa.gov/citations/19740027133',
+    note: 'Used for Apollo-era mission hardware costs: Command & Service Module $55M, Lunar Module $40M, Saturn V $185M. Values were then inflation-adjusted for cross-era comparison.',
+  },
+  {
+    key: 'bls-cpi-1969-2025',
+    title: 'BLS CPI-U historical and November 2025 index levels',
+    url: 'https://www.bls.gov/news.release/archives/cpi_12182025.htm',
+    note: 'Used to place Apollo and Artemis values on a comparable 2025-dollar scale. Conversion uses CPI-U annual average 36.7 for 1969 and CPI-U index level 324.122 for November 2025.',
+  },
+  {
+    key: 'apollo-program-reference',
+    title: 'NASA Apollo Program overview',
+    url: 'https://www.nasa.gov/mission_pages/apollo/index.html',
+    note: 'Used for Apollo spacecraft role descriptions, including the command module, service module, and lunar module as the program’s three major spacecraft elements.',
+  },
+  {
+    key: 'saturn-v-reference',
+    title: 'NASA Saturn V educational reference',
+    url: 'https://www.nasa.gov/learning-resources/for-kids-and-students/what-was-the-saturn-v-grades-5-8',
+    note: 'Used for Saturn V stage-role descriptions and the overall sequencing of the first, second, and third stages.',
+  },
+  {
+    key: 'saturn-v-stage-1',
+    title: 'NASA Science 3D resource: Saturn V – Stage 1',
+    url: 'https://science.nasa.gov/3d-resources/saturn-v-stage-1/',
+    note: 'Used for the role of the S-IC first stage and its five F-1 engines during liftoff and early ascent.',
+  },
+  {
+    key: 'saturn-v-stage-2',
+    title: 'NASA Science 3D resource: Saturn V – Stage 2',
+    url: 'https://science.nasa.gov/3d-resources/saturn-v-stage-2/',
+    note: 'Used for the role of the S-II second stage and its five J-2 engines after first-stage separation.',
+  },
+  {
+    key: 'saturn-v-instrument-unit',
+    title: 'NASA image article: Manufacturing the Saturn V Instrument Unit',
+    url: 'https://www.nasa.gov/image-article/manufacturing-saturn-v-instrument-unit/',
+    note: 'Used for the instrument unit description as the Saturn V guidance, navigation, control, and sequencing ring.',
+  },
+];
+
+const artemisHiddenParts = new Set(['solid-rocket-booster', 'foward-skirt-avionics', 'nozzle']);
+const apolloHiddenParts = new Set();
+
+const artemisParts = {
   'launch-abort-sytem': {
     part: 'Launch Abort System',
     contractor: 'Northrop Grumman',
+    priceGroup: 'orion-artemis-ii',
+    description: 'Pulls the Orion crew module to safety within milliseconds if an emergency occurs during launch or ascent.',
   },
   'crew-module': {
     part: 'Crew Module',
     contractor: 'Lockheed Martin',
     note: 'Aerojet Rocketdyne supplies auxiliary engines, reaction control thrusters, and helium tanks.',
+    priceGroup: 'orion-artemis-ii',
+    description: 'The pressurized capsule where astronauts live and work during the mission, and the only Orion element that returns to Earth.',
   },
   'encapsulated-service-module-panels': {
     part: 'Encapsulated Service Module Panels',
     contractor: 'Lockheed Martin',
+    priceGroup: 'orion-artemis-ii',
+    description: 'Encloses and protects service-module hardware during ascent while maintaining the spacecraft’s outer aerodynamic shape.',
   },
   'spacecraft-adpater': {
     part: 'Spacecraft Adapter',
     contractor: 'Teledyne Brown Engineering',
     note: 'Also associated with Jacobs ESSCA and AMRO Fabricating Corp.',
+    priceGroup: 'orion-artemis-ii',
+    description: 'Provides the structural interface that ties Orion spacecraft elements together and supports integration of spacecraft systems.',
   },
   'orion-stage-adapter': {
     part: 'Orion Stage Adapter',
     contractor: 'Teledyne Brown Engineering',
     note: 'Also associated with Jacobs ESSCA and AMRO Fabricating Corp.',
+    priceGroup: 'orion-stage-adapter-estimate',
+    description: 'Connects Orion to the interim cryogenic propulsion stage, shields the spacecraft from launch gases, and can carry CubeSat payloads.',
   },
   'interim-cryogenic-propulsion-stage': {
     part: 'Interim Cryogenic Propulsion Stage',
     contractor: 'Boeing',
     note: 'Built through United Launch Alliance, a Lockheed Martin and Boeing joint venture.',
+    priceGroup: 'icps',
+    description: 'Provides in-space propulsion after booster and core-stage separation, giving Orion the push needed to reach its mission trajectory.',
   },
   'launch-vehicle-stage-adapter': {
     part: 'Launch Vehicle Stage Adapter',
     contractor: 'Teledyne Brown Engineering',
+    priceGroup: 'lvsa',
+    description: 'Connects the core stage to the interim upper stage and helps protect ICPS avionics and electrical hardware from vibration and acoustic loads.',
   },
   'forward-skirt': {
     part: 'Front Skirt',
     contractor: 'Boeing',
+    priceGroup: 'core-stage',
+    description: 'The top section of the core stage that carries avionics and supports the upper stack above the liquid oxygen tank.',
   },
   'liquid-oxygen-tank': {
     part: 'Liquid Oxygen Tank',
     contractor: 'Boeing',
+    priceGroup: 'core-stage',
+    description: 'Stores the cryogenic liquid oxygen oxidizer that feeds the four RS-25 engines during ascent.',
   },
   intertank: {
     part: 'Intertank',
     contractor: 'Boeing',
+    priceGroup: 'core-stage',
+    description: 'Connects the liquid oxygen and liquid hydrogen tanks, houses avionics and electronics, and serves as a booster attachment region.',
   },
   'liquid-hydrogen-tank': {
     part: 'Liquid Hydrogen Tank',
     contractor: 'Boeing',
     note: 'Air Products is also listed for this tank.',
+    priceGroup: 'core-stage',
+    description: 'Stores the cryogenic liquid hydrogen fuel that feeds the four RS-25 engines during ascent.',
   },
   'engine-section': {
     part: 'Engine Section',
     contractor: 'Boeing',
+    priceGroup: 'core-stage',
+    description: 'Mounts, feeds, and controls the four RS-25 engines and serves as a major attachment point for the twin boosters.',
   },
   'rs25-engine-2': {
     part: 'RS-25 Engines',
     contractor: 'Aerojet Rocketdyne',
+    priceGroup: 'rs25-cluster',
+    description: 'The four reusable-space-shuttle-derived engines that provide the core stage’s main liquid-fueled thrust during ascent.',
   },
   'forward-assembly': {
     part: 'Forward Assembly',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'The top booster assembly, combining the forward skirt and nose cap to house avionics and provide a major structural connection to SLS.',
   },
   'foward-skirt-avionics': {
     part: 'Forward Skirt Avionics',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'Electronics that monitor booster health and communicate flight-control data for ignition, steering, and jettison operations.',
   },
   'forward-segment-with-igniter': {
     part: 'Forward Segment with Igniter',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'The top motor segment of the booster stack, containing ignition hardware that starts the five-segment booster burn.',
   },
   'center-forward-segment': {
     part: 'Center Forward Segment',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'One of the booster’s propellant-filled center motor segments that contributes sustained thrust during the first two minutes of flight.',
   },
   'center-center-segment': {
     part: 'Center Center Segment',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'A middle booster motor segment that adds solid-propellant volume and thrust to the five-segment booster stack.',
   },
   'center-aft-segment': {
     part: 'Center Aft Segment',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'A lower center booster motor segment that helps generate the bulk of early-ascent solid-rocket thrust.',
   },
   'aft-section': {
     part: 'Aft Segment',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'The lower motor section that channels thrust into the booster aft hardware and nozzle region.',
   },
   'solid-rocket-booster': {
     part: 'Solid Rocket Booster',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'A 17-story strap-on booster that provides more than 75 percent of SLS thrust at liftoff and during the first two minutes of ascent.',
   },
   'aft-skirt': {
     part: 'Aft Skirt',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'Houses the thrust vector control system and separation motors that steer the nozzle and separate the boosters after burnout.',
   },
   'core-stage-attach-ring': {
     part: 'Core Stage Attach Ring',
     contractor: 'Boeing',
+    priceGroup: 'core-stage',
+    description: 'Transfers structural loads between the booster hardware and core stage at one of the major rocket attachment interfaces.',
   },
   nozzle: {
     part: 'Nozzle',
     contractor: 'Northrop Grumman',
+    priceGroup: 'boosters',
+    description: 'Shapes and directs booster exhaust, allowing thrust vector control hardware to steer the rocket during initial ascent.',
   },
 };
 
+const apolloParts = {
+  'launch-escape-system': {
+    part: 'Launch Escape Module',
+    contractor: 'Lockheed Propulsion Co.',
+    note: 'Later folded into Lockheed Martin.',
+    priceGroup: 'apollo-csm',
+    description: 'A tower-mounted abort system that could pull the Apollo command module away from the booster during a launch emergency.',
+  },
+  'command-module': {
+    part: 'Command Module',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-csm',
+    description: 'The crew’s quarters and flight-control capsule, and the only Apollo spacecraft element that returned to Earth.',
+  },
+  'service-module': {
+    part: 'Service Module',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-csm',
+    description: 'Carried the Apollo spacecraft propulsion and support systems that powered and sustained the mission in space.',
+  },
+  'lunar-excursion-module': {
+    part: 'Lunar Excursion Module',
+    contractor: 'Northrop Grumman',
+    priceGroup: 'apollo-lm',
+    description: 'The two-stage lunar lander that carried two astronauts down to the Moon and back up to rendezvous in lunar orbit.',
+  },
+  'lunar-excursion-module-outer-hull': {
+    part: 'Lunar Excursion Module',
+    contractor: 'Northrop Grumman',
+    priceGroup: 'apollo-lm',
+    description: 'The external structure of the lunar module that enclosed the lander’s ascent and descent hardware for lunar operations.',
+  },
+  'instrument-unit': {
+    part: 'Instrument Unit',
+    contractor: 'IBM',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The Saturn V guidance ring mounted above the S-IVB, containing the rocket’s navigation, guidance, control, and sequencing equipment.',
+  },
+  'fuel-tank-sivb': {
+    part: 'S-IVB Fuel Tank',
+    contractor: 'Douglas Aircraft',
+    note: 'Historical Boeing lineage via Douglas Aircraft.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'Stored propellant for the Saturn V third stage, which first placed Apollo in Earth orbit and then performed translunar injection.',
+  },
+  'lox-tank-s4b': {
+    part: 'S-IVB Liquid Oxygen Tank',
+    contractor: 'Douglas Aircraft',
+    note: 'Historical Boeing lineage via Douglas Aircraft.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'Held the oxidizer for the Saturn V third stage during parking-orbit operations and the burn that sent Apollo toward the Moon.',
+  },
+  'j2-engine-1': {
+    part: 'S-IVB J-2 Engine',
+    contractor: 'Rocketdyne',
+    note: 'Later became part of Aerojet Rocketdyne.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The single restartable J-2 engine that powered the S-IVB third stage in Earth orbit and on the translunar injection burn.',
+  },
+  's2-outer-hull': {
+    part: 'S-II Stage',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The Saturn V second stage, which fired after S-IC separation and accelerated Apollo to near-orbital velocity.',
+  },
+  'fuel-tank-s2': {
+    part: 'S-II Fuel Tank',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'Stored propellant for the Saturn V second stage during the several-minute burn that carried the vehicle to high altitude and speed.',
+  },
+  'j2-engines-5': {
+    part: 'S-II J-2 Engines',
+    contractor: 'Rocketdyne',
+    note: 'Later became part of Aerojet Rocketdyne.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The five J-2 engines that powered the second stage after first-stage separation during the climb toward orbit.',
+  },
+  'sic-outer-hull': {
+    part: 'S-IC Stage',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The first stage of Saturn V, responsible for lifting the fully fueled Moon rocket off the pad and through the initial ascent.',
+  },
+  'lox-tank-sic': {
+    part: 'S-IC Liquid Oxygen Tank',
+    contractor: 'Boeing',
+    priceGroup: 'apollo-saturn-v',
+    description: 'Held the oxidizer for the Saturn V first stage during the liftoff phase powered by five F-1 engines.',
+  },
+  'fuel-tank-sic': {
+    part: 'S-IC Fuel Tank',
+    contractor: 'Boeing',
+    priceGroup: 'apollo-saturn-v',
+    description: 'Stored first-stage fuel for the S-IC burn that launched Saturn V through the earliest minutes of flight.',
+  },
+  'f1-engines-5': {
+    part: 'F-1 Engines',
+    contractor: 'Rocketdyne',
+    note: 'Later became part of Aerojet Rocketdyne.',
+    priceGroup: 'apollo-saturn-v',
+    description: 'The five first-stage engines that produced the enormous thrust needed to lift Saturn V from Earth at launch.',
+  },
+  'outer-hull': {
+    part: 'Apollo Spacecraft Stack',
+    contractor: 'North American Aviation',
+    note: 'Historical Boeing lineage via North American Aviation.',
+    priceGroup: 'apollo-csm',
+    description: 'The outer stacked spacecraft section combining the command and service modules above the Saturn V launch vehicle.',
+  },
+};
+
+const rockets = [
+  {
+    slug: 'artemis',
+    label: 'Artemis II',
+    title: 'Artemis II contractor rocket diagram',
+    desc: 'Interactive SLS and Orion diagram colored by contractor.',
+    svgPath: path.join(process.cwd(), 'public', 'graphics', 'sls-diagram-02.svg'),
+    hiddenParts: artemisHiddenParts,
+    parts: artemisParts,
+  },
+  {
+    slug: 'apollo',
+    label: 'Apollo Saturn V',
+    title: 'Apollo Saturn V contractor rocket diagram',
+    desc: 'Interactive Saturn V diagram colored by contractor and legacy company lineage.',
+    svgPath: path.join(process.cwd(), 'public', 'graphics', 'apollo', 'saturn-v-diagram-01.svg'),
+    hiddenParts: apolloHiddenParts,
+    parts: apolloParts,
+  },
+];
+
 function escapeAttr(value) {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
-function lookupPart(id) {
-  if (partInfo[id]) return partInfo[id];
-  if (id.endsWith('-2') && partInfo[id.slice(0, -2)]) return partInfo[id.slice(0, -2)];
-  return null;
+function normalizeId(id) {
+  return id.replace(/-\d+$/, '');
 }
 
-const svgPath = path.join(process.cwd(), 'public', 'graphics', 'sls-diagram-02.svg');
-const rawSvg = fs.readFileSync(svgPath, 'utf8');
-const rocketSvg = rawSvg
-  .replace('<svg ', '<svg class="rocket-svg" role="img" aria-labelledby="rocket-title rocket-desc" ')
-  .replace(
-    '<g id="Layer_2"',
-    '<title id="rocket-title">Artemis II contractor rocket diagram</title><desc id="rocket-desc">Interactive SLS and Orion diagram colored by contractor.</desc><g id="Layer_2"',
-  )
-  .replace(/<(path|polyline|polygon)\b([^>]*?)(\s*\/?)>/g, (match, tag, attrs, closing) => {
-    const idMatch = attrs.match(/\bid="([^"]+)"/);
-    if (!idMatch) return match;
+function lookupPart(id, partInfo) {
+  return partInfo[id] ?? partInfo[normalizeId(id)] ?? null;
+}
 
-    const info = lookupPart(idMatch[1]);
-    if (!info) return match;
+function buildNote(info) {
+  const style = contractorStyles[info.contractor];
+  if (!style?.mergedInto) return info.note ?? '';
 
-    const color = contractorColors[info.contractor];
-    const title = `${info.part}: ${info.contractor}`;
-    const cleanAttrs = attrs.replace(/\sclass="[^"]*"/, '');
+  return [info.note, `Later merged into ${style.mergedInto}.`].filter(Boolean).join(' ');
+}
 
-    return `<${tag}${cleanAttrs} class="artemis-part" tabindex="0" role="button" style="--part-fill: ${color}" data-part="${escapeAttr(info.part)}" data-contractor="${escapeAttr(info.contractor)}" data-note="${escapeAttr(info.note ?? '')}" aria-label="${escapeAttr(title)}"${closing}>`;
+function buildDescription(info) {
+  return info.description ?? 'Description unavailable for this graphic element.';
+}
+
+function hexToRgb(hex) {
+  const clean = hex.replace('#', '');
+  return {
+    r: Number.parseInt(clean.slice(0, 2), 16),
+    g: Number.parseInt(clean.slice(2, 4), 16),
+    b: Number.parseInt(clean.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  return `#${[r, g, b].map((value) => Math.round(value).toString(16).padStart(2, '0')).join('')}`;
+}
+
+function mixHex(from, to, t) {
+  const start = hexToRgb(from);
+  const end = hexToRgb(to);
+  return rgbToHex({
+    r: start.r + (end.r - start.r) * t,
+    g: start.g + (end.g - start.g) * t,
+    b: start.b + (end.b - start.b) * t,
   });
+}
+
+const priceAmounts = Object.values(priceGroups).map((group) => group.amount);
+const minPriceAmount = Math.min(...priceAmounts);
+const maxPriceAmount = Math.max(...priceAmounts);
+const minPriceLabel = `$${(minPriceAmount / 1000000).toFixed(1)}M`;
+const maxPriceLabel = `$${(maxPriceAmount / 1000000000).toFixed(1)}B`;
+const defaultPriceScaleExponent = 0.6;
+
+function priceColor(amount) {
+  const normalized = maxPriceAmount === minPriceAmount
+    ? 1
+    : (amount - minPriceAmount) / (maxPriceAmount - minPriceAmount);
+  const t = Math.pow(Math.max(0, normalized), defaultPriceScaleExponent);
+  return mixHex('#e5f7e8', '#0f8e4f', t);
+}
+
+function getPriceMeta(info) {
+  if (!info.priceGroup) return null;
+  const group = priceGroups[info.priceGroup];
+  if (!group) return null;
+
+  return {
+    ...group,
+    color: priceColor(group.amount),
+  };
+}
+
+function renderRocketSvg(rocket) {
+  const rawSvg = fs.readFileSync(rocket.svgPath, 'utf8');
+
+  return rawSvg
+    .replace(
+      '<svg ',
+      `<svg class="rocket-svg rocket-svg--${rocket.slug}" role="img" aria-labelledby="${rocket.slug}-rocket-title ${rocket.slug}-rocket-desc" `,
+    )
+    .replace(
+      /<g id="Layer_2"/,
+      `<title id="${rocket.slug}-rocket-title">${rocket.title}</title><desc id="${rocket.slug}-rocket-desc">${rocket.desc}</desc><g id="Layer_2"`,
+    )
+    .replace(/<g\b([^>]*\bid="([^"]+)"[^>]*)>/g, (match, attrs, id) => {
+      if (id === 'Layer_2') return match;
+      if (rocket.hiddenParts.has(id) || rocket.hiddenParts.has(normalizeId(id))) {
+        return match;
+      }
+
+      const info = lookupPart(id, rocket.parts);
+      if (!info) return match;
+
+      const color = contractorStyles[info.contractor]?.color;
+      if (!color) return match;
+      const priceMeta = getPriceMeta(info);
+
+      const title = `${info.part}: ${info.contractor}`;
+      const cleanAttrs = attrs.replace(/\sclass="[^"]*"/g, '');
+
+      return `<g${cleanAttrs} class="artemis-part artemis-part--group" tabindex="0" role="button" style="--part-fill: ${color}" data-part="${escapeAttr(info.part)}" data-contractor="${escapeAttr(info.contractor)}" data-contractor-color="${escapeAttr(color)}" data-description="${escapeAttr(buildDescription(info))}" data-note="${escapeAttr(buildNote(info))}" data-rocket="${escapeAttr(rocket.label)}" data-part-group="${escapeAttr(normalizeId(id))}" data-price-group="${escapeAttr(info.priceGroup ?? '')}" data-price-label="${escapeAttr(priceMeta?.label ?? 'Unavailable')}" data-price-title="${escapeAttr(priceMeta?.title ?? 'Price unavailable')}" data-price-note="${escapeAttr(priceMeta?.note ?? 'No isolated NASA-published part price was found in the reviewed source set.')}" data-price-color="${escapeAttr(priceMeta?.color ?? '#d9ddd9')}" data-price-amount="${escapeAttr(priceMeta?.amount ?? '')}" data-price-source="${escapeAttr(priceMeta?.sourceKey ?? '')}" data-price-estimated="${priceMeta?.estimated ? 'true' : 'false'}" data-price-available="${priceMeta ? 'true' : 'false'}" aria-label="${escapeAttr(title)}">`;
+    })
+    .replace(/<(path|polyline|polygon)\b([^>]*?)(\s*\/?)>/g, (match, tag, attrs, closing) => {
+      const idMatch = attrs.match(/\bid="([^"]+)"/);
+      if (!idMatch) return match;
+
+      const id = idMatch[1];
+      if (rocket.hiddenParts.has(id) || rocket.hiddenParts.has(normalizeId(id))) {
+        return '';
+      }
+
+      const info = lookupPart(id, rocket.parts);
+      if (!info) return match;
+
+      const color = contractorStyles[info.contractor]?.color;
+      if (!color) return match;
+      const priceMeta = getPriceMeta(info);
+
+      const title = `${info.part}: ${info.contractor}`;
+      const cleanAttrs = attrs.replace(/\sclass="[^"]*"/g, '');
+
+      return `<${tag}${cleanAttrs} class="artemis-part" tabindex="0" role="button" style="--part-fill: ${color}" data-part="${escapeAttr(info.part)}" data-contractor="${escapeAttr(info.contractor)}" data-contractor-color="${escapeAttr(color)}" data-description="${escapeAttr(buildDescription(info))}" data-note="${escapeAttr(buildNote(info))}" data-rocket="${escapeAttr(rocket.label)}" data-part-group="${escapeAttr(normalizeId(id))}" data-price-group="${escapeAttr(info.priceGroup ?? '')}" data-price-label="${escapeAttr(priceMeta?.label ?? 'Unavailable')}" data-price-title="${escapeAttr(priceMeta?.title ?? 'Price unavailable')}" data-price-note="${escapeAttr(priceMeta?.note ?? 'No isolated NASA-published part price was found in the reviewed source set.')}" data-price-color="${escapeAttr(priceMeta?.color ?? '#d9ddd9')}" data-price-amount="${escapeAttr(priceMeta?.amount ?? '')}" data-price-source="${escapeAttr(priceMeta?.sourceKey ?? '')}" data-price-estimated="${priceMeta?.estimated ? 'true' : 'false'}" data-price-available="${priceMeta ? 'true' : 'false'}" aria-label="${escapeAttr(title)}"${closing}>`;
+    });
+}
+
+const rocketSlides = rockets.map((rocket) => ({
+  ...rocket,
+  svg: renderRocketSvg(rocket),
+}));
 ---
 
 <!doctype html>
@@ -190,6 +720,15 @@ const rocketSvg = rawSvg
         overflow-x: hidden;
       }
 
+      button {
+        font: inherit;
+      }
+
+      .page-shell {
+        display: grid;
+        gap: 0;
+      }
+
       .page {
         min-height: 100vh;
         display: grid;
@@ -200,6 +739,7 @@ const rocketSvg = rawSvg
         position: sticky;
         top: 0;
         height: 100vh;
+        min-width: 0;
         padding: 28px;
         border-right: 1px solid var(--line);
         background: var(--panel);
@@ -229,6 +769,34 @@ const rocketSvg = rawSvg
         gap: 10px;
       }
 
+      .mode-toggle {
+        display: inline-grid;
+        grid-auto-flow: column;
+        gap: 0;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px;
+        background: #f2f3ef;
+      }
+
+      .mode-button {
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        padding: 8px 14px;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+      }
+
+      .mode-button.is-active {
+        background: #fff;
+        color: var(--ink);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+      }
+
       .key h2,
       .details h2 {
         margin: 0 0 4px;
@@ -241,8 +809,19 @@ const rocketSvg = rawSvg
         display: grid;
         grid-template-columns: 18px 1fr;
         gap: 10px;
-        align-items: center;
+        align-items: start;
         font-size: 0.95rem;
+      }
+
+      .key-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .key-children {
+        display: grid;
+        gap: 8px;
+        padding-left: 28px;
       }
 
       .swatch {
@@ -251,8 +830,58 @@ const rocketSvg = rawSvg
         border: 1px solid rgba(0, 0, 0, 0.28);
       }
 
+      .key-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .price-legend {
+        display: none;
+        gap: 12px;
+      }
+
+      .page-shell.is-price-mode .contractor-key {
+        display: none;
+      }
+
+      .page-shell.is-price-mode .price-legend {
+        display: grid;
+      }
+
+      .price-gradient {
+        height: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: linear-gradient(90deg, #e5f7e8 0%, #0f8e4f 100%);
+      }
+
+      .price-scale {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .price-copy {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
+      .price-missing {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 10px;
+        align-items: start;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
       .details {
         margin-top: auto;
+        width: 100%;
+        min-width: 0;
         padding-top: 20px;
         border-top: 1px solid var(--line);
       }
@@ -261,12 +890,33 @@ const rocketSvg = rawSvg
         margin: 0;
         font-size: 1.1rem;
         line-height: 1.2;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
 
       .details-contractor {
         margin: 8px 0 0;
         color: var(--muted);
         font-size: 0.95rem;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+
+      .details-price {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+
+      .details-description {
+        margin: 12px 0 0;
+        color: var(--ink);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
 
       .details-note {
@@ -274,6 +924,8 @@ const rocketSvg = rawSvg
         color: var(--muted);
         font-size: 0.85rem;
         line-height: 1.4;
+        max-width: 100%;
+        overflow-wrap: anywhere;
       }
 
       .stage {
@@ -283,11 +935,100 @@ const rocketSvg = rawSvg
         place-items: center;
       }
 
+      .rocket-slider {
+        width: min(100%, 760px);
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: clamp(10px, 2vw, 22px);
+        align-items: center;
+      }
+
       .rocket-shell {
-        width: min(100%, 620px);
+        width: 100%;
         min-height: min(88vh, 900px);
         display: grid;
+        gap: 16px;
+        justify-items: center;
+        align-content: center;
+      }
+
+      .rocket-window {
+        width: min(100%, 620px);
+        overflow: hidden;
+      }
+
+      .rocket-track {
+        display: flex;
+        transition: transform 280ms ease;
+        will-change: transform;
+      }
+
+      .rocket-slide {
+        flex: 0 0 100%;
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+      }
+
+      .rocket-label {
+        font-size: 0.8rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .rocket-controls {
+        display: grid;
+        gap: 14px;
+        justify-items: center;
+      }
+
+      .slider-button {
+        width: 48px;
+        height: 48px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--ink);
+        display: grid;
         place-items: center;
+        cursor: pointer;
+        transition:
+          background 160ms ease,
+          transform 160ms ease,
+          border-color 160ms ease;
+      }
+
+      .slider-button:hover,
+      .slider-button:focus-visible {
+        background: #fff;
+        border-color: #a9adb3;
+        transform: scale(1.04);
+        outline: none;
+      }
+
+      .slider-button svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .rocket-pips {
+        display: flex;
+        gap: 8px;
+      }
+
+      .rocket-pip {
+        width: 10px;
+        height: 10px;
+        border: 0;
+        border-radius: 999px;
+        background: #d2d5da;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .rocket-pip.is-active {
+        background: var(--ink);
       }
 
       .rocket-svg {
@@ -309,6 +1050,15 @@ const rocketSvg = rawSvg
           stroke-width 160ms ease;
       }
 
+      .rocket-svg .artemis-part--group path,
+      .rocket-svg .artemis-part--group polyline,
+      .rocket-svg .artemis-part--group polygon {
+        fill: var(--part-fill);
+        stroke: #1f1f1f;
+        stroke-width: 0.72px;
+        vector-effect: non-scaling-stroke;
+      }
+
       .rocket-svg .artemis-part:hover,
       .rocket-svg .artemis-part:focus-visible,
       .rocket-svg .artemis-part.is-active {
@@ -317,6 +1067,19 @@ const rocketSvg = rawSvg
         stroke: #000;
         stroke-width: 1.8px;
         outline: none;
+      }
+
+      .rocket-svg .artemis-part--group:hover path,
+      .rocket-svg .artemis-part--group:focus-visible path,
+      .rocket-svg .artemis-part--group.is-active path,
+      .rocket-svg .artemis-part--group:hover polyline,
+      .rocket-svg .artemis-part--group:focus-visible polyline,
+      .rocket-svg .artemis-part--group.is-active polyline,
+      .rocket-svg .artemis-part--group:hover polygon,
+      .rocket-svg .artemis-part--group:focus-visible polygon,
+      .rocket-svg .artemis-part--group.is-active polygon {
+        stroke: #000;
+        stroke-width: 1.8px;
       }
 
       .rocket-svg:has(.artemis-part:hover) .artemis-part:not(:hover),
@@ -348,6 +1111,7 @@ const rocketSvg = rawSvg
         display: block;
         font-size: 0.92rem;
         line-height: 1.2;
+        overflow-wrap: anywhere;
       }
 
       .tooltip span {
@@ -356,6 +1120,102 @@ const rocketSvg = rawSvg
         color: var(--muted);
         font-size: 0.82rem;
         line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      .viz-stack {
+        display: grid;
+        gap: 0;
+      }
+
+      .bibliography {
+        padding: clamp(24px, 4vw, 42px);
+        border-top: 1px solid var(--line);
+        background: #f5f5f1;
+      }
+
+      .bibliography h2 {
+        margin: 0 0 14px;
+        font-size: clamp(1.35rem, 2vw, 1.8rem);
+        line-height: 1.05;
+      }
+
+      .bibliography-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .bibliography-item {
+        display: grid;
+        gap: 4px;
+      }
+
+      .bibliography-item a {
+        color: inherit;
+      }
+
+      .bibliography-item p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .viz-band {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) 1fr;
+        gap: 28px;
+        padding: clamp(24px, 4vw, 42px);
+        border-top: 1px solid var(--line);
+        background: #fcfcfa;
+      }
+
+      .viz-copy h2 {
+        margin: 0 0 10px;
+        font-size: clamp(1.35rem, 2vw, 1.8rem);
+        line-height: 1.05;
+      }
+
+      .viz-copy p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.94rem;
+        line-height: 1.5;
+        max-width: 26rem;
+      }
+
+      .viz-frame {
+        min-width: 0;
+      }
+
+      .viz-canvas {
+        position: relative;
+        width: 100%;
+        padding: 18px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .viz-canvas--grid {
+        max-width: 920px;
+        margin: 0 auto;
+      }
+
+      .viz-tooltip {
+        position: absolute;
+        z-index: 6;
+        left: 0;
+        top: 0;
+        max-width: min(260px, calc(100% - 18px));
+        padding: 8px 10px;
+        border-radius: 4px;
+        background: rgba(17, 17, 17, 0.92);
+        color: #fff;
+        font-size: 12px;
+        line-height: 1.35;
+        pointer-events: none;
+        transform: translate3d(12px, 12px, 0);
+        transition: opacity 120ms ease;
       }
 
       @media (max-width: 780px) {
@@ -386,6 +1246,29 @@ const rocketSvg = rawSvg
           padding: 22px 18px 36px;
         }
 
+        .rocket-slider {
+          width: 100%;
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+
+        .rocket-window {
+          order: 1;
+          width: 100%;
+        }
+
+        .mode-toggle {
+          width: 100%;
+          grid-auto-flow: column;
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .slider-button {
+          width: 100%;
+          height: 42px;
+          border-radius: 18px;
+        }
+
         .rocket-shell {
           min-height: auto;
         }
@@ -394,66 +1277,242 @@ const rocketSvg = rawSvg
           width: min(100%, 360px);
           height: auto;
         }
+
+        .viz-band {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding: 22px 18px 28px;
+        }
+
+        .viz-canvas {
+          padding: 10px;
+          overflow-x: auto;
+        }
+
+        .viz-canvas--grid {
+          max-width: 100%;
+        }
+
+        .bibliography {
+          padding: 22px 18px 28px;
+        }
       }
     </style>
   </head>
   <body>
-    <main class="page">
-      <aside class="panel" aria-label="Artemis II contractor key">
-        <div>
-          <h1>Artemis II</h1>
-          <p class="deck">SLS and Orion contractors mapped to the rocket structure.</p>
-        </div>
+    <main class="page-shell">
+      <section class="page">
+        <aside class="panel" aria-label="Artemis II contractor key">
+          <div>
+            <h1>Artemis II</h1>
+            <p class="deck">SLS and Orion contractors mapped to the rocket structure.</p>
+          </div>
 
-        <section class="key" aria-labelledby="key-title">
-          <h2 id="key-title">Key</h2>
+          <div class="mode-toggle" role="tablist" aria-label="Rocket data mode">
+            <button class="mode-button is-active" type="button" data-mode-button data-mode="contractors" aria-selected="true">Contractors</button>
+            <button class="mode-button" type="button" data-mode-button data-mode="prices" aria-selected="false">Prices</button>
+          </div>
+
+          <section class="key contractor-key" aria-labelledby="key-title">
+            <h2 id="key-title">Key</h2>
+            {
+              contractorKey.map((item) => (
+                <div class="key-group">
+                  <div class="key-row">
+                    <span class="swatch" style={`background: ${item.color}`} aria-hidden="true" />
+                    <span class="key-copy">
+                      <span>{item.name}</span>
+                    </span>
+                  </div>
+
+                  {item.children.length > 0 && (
+                    <div class="key-children">
+                      {item.children.map((child) => (
+                        <div class="key-row">
+                          <span class="swatch" style={`background: ${child.color}`} aria-hidden="true" />
+                          <span class="key-copy">
+                            <span>{child.name}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            }
+          </section>
+
+          <section class="price-legend" aria-labelledby="price-title">
+            <h2 id="price-title">Price Scale</h2>
+            <div class="price-gradient" aria-hidden="true"></div>
+            <div class="price-scale">
+              <span>min: {minPriceLabel}</span>
+              <span>max: {maxPriceLabel}</span>
+            </div>
+            <p class="price-copy">Price mode uses a power scale to separate high-cost Artemis hardware more aggressively while preserving some contrast among lower-cost parts. Colors map from the minimum to maximum sourced Artemis price values, with subsystem proxies used where NASA only publishes grouped hardware or contract costs.</p>
+            <div class="price-missing">
+              <span class="swatch" style="background: #d9ddd9" aria-hidden="true"></span>
+              <span>No isolated NASA price located in the reviewed source set.</span>
+            </div>
+          </section>
+
+          <section class="details" aria-live="polite">
+            <h2>Part</h2>
+            <p class="details-name" data-details-name>Rocket component</p>
+            <p class="details-contractor" data-details-contractor>Hover or focus a colored region.</p>
+            <p class="details-price" data-details-price></p>
+            <p class="details-description" data-details-description></p>
+            <p class="details-note" data-details-note></p>
+          </section>
+        </aside>
+
+        <section class="stage" aria-label="Interactive rocket diagram">
+          <div
+            class="rocket-slider"
+            data-rocket-slider
+            data-slide-count={rocketSlides.length}
+          >
+            <button class="slider-button" type="button" data-slider-prev aria-label="Previous rocket">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+              </svg>
+            </button>
+
+            <div class="rocket-shell">
+              <div class="rocket-controls">
+                <div class="mode-toggle" role="tablist" aria-label="Rocket data mode">
+                  <button class="mode-button is-active" type="button" data-mode-button data-mode="contractors" aria-selected="true">Contractors</button>
+                  <button class="mode-button" type="button" data-mode-button data-mode="prices" aria-selected="false">Prices</button>
+                </div>
+
+              </div>
+
+              <div class="rocket-window">
+                <div class="rocket-track" data-rocket-track>
+                  {
+                    rocketSlides.map((rocket) => (
+                      <article class="rocket-slide" data-rocket-slide aria-label={rocket.label}>
+                        <span class="rocket-label">{rocket.label}</span>
+                        <div set:html={rocket.svg} />
+                      </article>
+                    ))
+                  }
+                </div>
+              </div>
+
+              <div class="rocket-pips" aria-label="Rocket selector">
+                {
+                  rocketSlides.map((rocket, index) => (
+                    <button
+                      class={`rocket-pip${index === 0 ? ' is-active' : ''}`}
+                      type="button"
+                      data-slider-pip
+                      data-slide-index={index}
+                      aria-label={`Show ${rocket.label}`}
+                      aria-pressed={index === 0 ? 'true' : 'false'}
+                    />
+                  ))
+                }
+              </div>
+            </div>
+
+            <button class="slider-button" type="button" data-slider-next aria-label="Next rocket">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9.5 5.5 16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+              </svg>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="viz-stack" aria-label="Artemis data visualizations">
+        <AstronautGrid />
+        <AstronautSankey />
+      </section>
+
+      <section class="bibliography" aria-labelledby="bibliography-title">
+        <h2 id="bibliography-title">Data Bibliography</h2>
+        <div class="bibliography-list">
           {
-            contractorKey.map(([name, color]) => (
-              <div class="key-row">
-                <span class="swatch" style={`background: ${color}`} aria-hidden="true" />
-                <span>{name}</span>
+            priceBibliography.map((entry) => (
+              <div class="bibliography-item">
+                <a href={entry.url} target="_blank" rel="noreferrer">{entry.title}</a>
+                <p>{entry.note}</p>
               </div>
             ))
           }
-        </section>
-
-        <section class="details" aria-live="polite">
-          <h2>Part</h2>
-          <p class="details-name" data-details-name>Rocket component</p>
-          <p class="details-contractor" data-details-contractor>Hover or focus a colored region.</p>
-          <p class="details-note" data-details-note></p>
-        </section>
-      </aside>
-
-      <section class="stage" aria-label="Interactive rocket diagram">
-        <div class="rocket-shell" set:html={rocketSvg} />
+        </div>
       </section>
     </main>
 
     <div class="tooltip" data-tooltip aria-hidden="true">
       <strong data-tooltip-part></strong>
       <span data-tooltip-contractor></span>
+      <span data-tooltip-price></span>
     </div>
 
     <script>
+      const pageShell = document.querySelector('.page-shell');
       const parts = Array.from(document.querySelectorAll('.artemis-part'));
       const tooltip = document.querySelector('[data-tooltip]');
       const tooltipPart = document.querySelector('[data-tooltip-part]');
       const tooltipContractor = document.querySelector('[data-tooltip-contractor]');
+      const tooltipPrice = document.querySelector('[data-tooltip-price]');
       const detailsName = document.querySelector('[data-details-name]');
       const detailsContractor = document.querySelector('[data-details-contractor]');
+      const detailsPrice = document.querySelector('[data-details-price]');
+      const detailsDescription = document.querySelector('[data-details-description]');
       const detailsNote = document.querySelector('[data-details-note]');
+      const modeButtons = Array.from(document.querySelectorAll('[data-mode-button]'));
+      const slider = document.querySelector('[data-rocket-slider]');
+      const track = document.querySelector('[data-rocket-track]');
+      const prevButton = document.querySelector('[data-slider-prev]');
+      const nextButton = document.querySelector('[data-slider-next]');
+      const pips = Array.from(document.querySelectorAll('[data-slider-pip]'));
+      const slideCount = Number(slider?.dataset.slideCount ?? 0);
+      let currentSlide = 0;
+      let currentMode = 'contractors';
+
+      function getPriceDisplay(target) {
+        const rocket = target.dataset.rocket;
+        const isAvailable = target.dataset.priceAvailable === 'true';
+        const isEstimated = target.dataset.priceEstimated === 'true';
+
+        if (!isAvailable) {
+          return {
+            short: 'Price unavailable',
+            long: `Price unavailable · ${rocket}`,
+            note: target.dataset.priceNote || '',
+          };
+        }
+
+        const title = target.dataset.priceTitle;
+        const label = target.dataset.priceLabel;
+        const displayTitle = isEstimated ? `${title} (estimated)` : title;
+
+        return {
+          short: `${displayTitle} · ${label}`,
+          long: `${displayTitle} · ${label} · ${rocket}`,
+          note: target.dataset.priceNote || '',
+        };
+      }
 
       function setContent(target) {
         const part = target.dataset.part;
+        const rocket = target.dataset.rocket;
         const contractor = target.dataset.contractor;
-        const note = target.dataset.note;
+        const description = target.dataset.description || '';
+        const priceDisplay = getPriceDisplay(target);
 
         tooltipPart.textContent = part;
-        tooltipContractor.textContent = contractor;
+        tooltipContractor.textContent = `${contractor} · ${rocket}`;
+        tooltipPrice.textContent = priceDisplay.short;
+
         detailsName.textContent = part;
-        detailsContractor.textContent = contractor;
-        detailsNote.textContent = note || '';
+        detailsContractor.textContent = `${contractor} · ${rocket}`;
+        detailsPrice.textContent = priceDisplay.long;
+        detailsDescription.textContent = description;
+        detailsNote.textContent = priceDisplay.note || target.dataset.note || '';
       }
 
       function showTooltip(target) {
@@ -484,25 +1543,122 @@ const rocketSvg = rawSvg
         tooltip.style.transform = `translate3d(${Math.max(10, left)}px, ${Math.max(10, top)}px, 0)`;
       }
 
+      function clearActiveParts() {
+        parts.forEach((part) => part.classList.remove('is-active'));
+      }
+
+      function getRelatedParts(target) {
+        if (currentMode === 'prices') {
+          const group = target.dataset.priceGroup;
+          if (target.dataset.priceAvailable === 'true' && group) {
+            return parts.filter(
+              (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.priceGroup === group,
+            );
+          }
+
+          return [target];
+        }
+
+        const group = target.dataset.partGroup;
+        return parts.filter(
+          (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.partGroup === group,
+        );
+      }
+
+      function activateRelatedParts(target) {
+        clearActiveParts();
+        getRelatedParts(target).forEach((part) => part.classList.add('is-active'));
+      }
+
+      function updateModeButtons() {
+        modeButtons.forEach((button) => {
+          const active = button.dataset.mode === currentMode;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+      }
+
+      function updatePartFills() {
+        parts.forEach((part) => {
+          const fill = currentMode === 'prices'
+            ? part.dataset.priceColor
+            : part.dataset.contractorColor;
+          part.style.setProperty('--part-fill', fill);
+        });
+      }
+
+      function updateMode(mode) {
+        currentMode = mode;
+        pageShell?.classList.toggle('is-price-mode', mode === 'prices');
+        updateModeButtons();
+        updatePartFills();
+        clearActiveParts();
+        hideTooltip();
+        detailsName.textContent = 'Rocket component';
+        detailsContractor.textContent = 'Hover or focus a colored region.';
+        detailsPrice.textContent = '';
+        detailsDescription.textContent = '';
+        detailsNote.textContent = '';
+      }
+
+      function updateSlider(index) {
+        currentSlide = (index + slideCount) % slideCount;
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+        pips.forEach((pip, pipIndex) => {
+          const active = pipIndex === currentSlide;
+          pip.classList.toggle('is-active', active);
+          pip.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        clearActiveParts();
+        hideTooltip();
+      }
+
       parts.forEach((part) => {
         part.addEventListener('pointerenter', (event) => {
+          activateRelatedParts(part);
           showTooltip(part);
           moveTooltip(event);
         });
 
         part.addEventListener('pointermove', moveTooltip);
-        part.addEventListener('pointerleave', hideTooltip);
+        part.addEventListener('pointerleave', () => {
+          clearActiveParts();
+          hideTooltip();
+        });
 
         part.addEventListener('focus', () => {
+          activateRelatedParts(part);
           setContent(part);
+        });
+
+        part.addEventListener('blur', () => {
+          clearActiveParts();
         });
 
         part.addEventListener('click', () => {
-          parts.forEach((item) => item.classList.remove('is-active'));
-          part.classList.add('is-active');
+          activateRelatedParts(part);
           setContent(part);
         });
       });
+
+      prevButton?.addEventListener('click', () => updateSlider(currentSlide - 1));
+      nextButton?.addEventListener('click', () => updateSlider(currentSlide + 1));
+
+      pips.forEach((pip) => {
+        pip.addEventListener('click', () => {
+          updateSlider(Number(pip.dataset.slideIndex ?? 0));
+        });
+      });
+
+      modeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          updateMode(button.dataset.mode ?? 'contractors');
+        });
+      });
+
+      updateMode(currentMode);
     </script>
   </body>
 </html>

@@ -1,0 +1,265 @@
+---
+const csvUrl = '/graphics/astro-vizs/files/928c412ab4df44841ae69f2f3791c0322d01f19a218c549122363ee5b1dc9c54bdb9032cfa8185808e597878fe519b39fdf771d5ee81b33a85ffc6dabb9031b4.csv';
+---
+
+<section class="viz-band">
+  <div class="viz-copy">
+    <h2>Selection Flow</h2>
+    <p>How the full astronaut population flows from military or civilian background through occupation, sex, and nationality, with the Artemis II paths overlaid.</p>
+  </div>
+  <div class="viz-frame">
+    <div id="astronaut-sankey" class="viz-canvas"></div>
+  </div>
+</section>
+
+<script>
+  import * as d3 from 'd3';
+  import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
+
+  const csvUrl = '/graphics/astro-vizs/files/928c412ab4df44841ae69f2f3791c0322d01f19a218c549122363ee5b1dc9c54bdb9032cfa8185808e597878fe519b39fdf771d5ee81b33a85ffc6dabb9031b4.csv';
+  const artemisAstronauts = [
+    { name: 'Reid Wiseman', nationality: 'U.S.', occupation: 'commander', sex: 'male', year_of_selection: '2009', military_civilian: 'military' },
+    { name: 'Victor Glover', nationality: 'U.S.', occupation: 'pilot', sex: 'male', year_of_selection: '2013', military_civilian: 'military' },
+    { name: 'Christina Koch', nationality: 'U.S.', occupation: 'Mission Specialist', sex: 'female', year_of_selection: '2013', military_civilian: 'civilian' },
+    { name: 'Jeremy Hansen', nationality: 'Canada', occupation: 'Mission Specialist', sex: 'male', year_of_selection: '2009', military_civilian: 'military' },
+  ];
+
+  const occupationFix = {
+    Pilot: 'pilot',
+    'Flight engineer': 'flight engineer',
+    MSP: 'Mission Specialist',
+    PSP: 'Payload Specialist',
+    'Other (Space tourist)': 'Other (space tourist)',
+    'spaceflight participant': 'Other (space tourist)',
+    'Space tourist': 'Other (space tourist)',
+  };
+
+  const nationalityFix = {
+    'U.K./U.S.': 'U.S.',
+  };
+
+  function normalizeAstronauts(rows) {
+    return rows.map((row) => ({
+      ...row,
+      occupation: occupationFix[String(row.occupation).trim()] ?? String(row.occupation).trim(),
+      nationality: nationalityFix[String(row.nationality).trim()] ?? String(row.nationality).trim(),
+    }));
+  }
+
+  async function renderAstronautSankey() {
+    const host = document.querySelector('#astronaut-sankey');
+    if (!host) return;
+
+    const data = normalizeAstronauts(await d3.csv(csvUrl));
+    const width = 960;
+    const height = 700;
+    const margin = { top: 24, right: 24, bottom: 24, left: 24 };
+    const stages = ['military_civilian', 'occupation', 'sex', 'nationality'];
+    const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+    const byNumber = new Map();
+    data.forEach((row) => {
+      const key = row.number ?? row.id ?? row.name;
+      if (!byNumber.has(key)) byNumber.set(key, row);
+    });
+    const unique = Array.from(byNumber.values());
+
+    const linkCounts = new Map();
+    unique.forEach((row) => {
+      const path = stages.map((stage) => row[stage] == null ? 'Unknown' : String(row[stage]).trim() || 'Unknown');
+      for (let i = 0; i < path.length - 1; i += 1) {
+        const key = `${i}|${path[i]}|${path[i + 1]}`;
+        linkCounts.set(key, (linkCounts.get(key) || 0) + 1);
+      }
+    });
+
+    const nodeIndex = new Map();
+    const nodes = [];
+    const links = [];
+
+    function ensureNode(stageIndex, name) {
+      const key = `${stageIndex}|${name}`;
+      if (!nodeIndex.has(key)) {
+        const index = nodes.length;
+        nodeIndex.set(key, index);
+        nodes.push({ name, stage: stageIndex });
+      }
+      return nodeIndex.get(key);
+    }
+
+    for (const key of linkCounts.keys()) {
+      const [stageIndexRaw, from, to] = key.split('|');
+      const stageIndex = Number(stageIndexRaw);
+      ensureNode(stageIndex, from);
+      ensureNode(stageIndex + 1, to);
+    }
+
+    for (const [key, value] of linkCounts.entries()) {
+      const [stageIndexRaw, from, to] = key.split('|');
+      const stageIndex = Number(stageIndexRaw);
+      links.push({
+        source: ensureNode(stageIndex, from),
+        target: ensureNode(stageIndex + 1, to),
+        value,
+      });
+    }
+
+    host.innerHTML = '';
+
+    const tooltip = d3.select(host)
+      .append('div')
+      .attr('class', 'viz-tooltip')
+      .style('opacity', '0');
+
+    const graph = sankey()
+      .nodeWidth(18)
+      .nodePadding(8)
+      .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+      .nodeId((d, i) => i)({
+        nodes: nodes.map((d) => ({ ...d })),
+        links: links.map((d) => ({ ...d })),
+      });
+
+    const svg = d3.create('svg')
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .attr('aria-label', 'Astronaut sankey diagram')
+      .style('width', '100%')
+      .style('height', 'auto')
+      .style('display', 'block')
+      .style('font-family', 'Inter, ui-sans-serif, system-ui, sans-serif')
+      .style('font-size', '12px');
+
+    const link = svg.append('g')
+      .attr('fill', 'none')
+      .attr('stroke-opacity', 0.5)
+      .selectAll('path')
+      .data(graph.links)
+      .join('path')
+      .attr('d', sankeyLinkHorizontal())
+      .attr('stroke', (d) => color(graph.nodes[d.source.index].name))
+      .attr('stroke-width', (d) => Math.max(1, d.width))
+      .attr('stroke-linecap', 'butt')
+      .attr('opacity', 0.6)
+      .on('pointermove', (event, d) => {
+        tooltip
+          .style('opacity', '1')
+          .html(`${graph.nodes[d.source.index].name} → ${graph.nodes[d.target.index].name}<br>${d.value} astronaut(s)`)
+          .style('left', `${event.offsetX + 14}px`)
+          .style('top', `${event.offsetY - 12}px`);
+      })
+      .on('pointerleave', () => tooltip.style('opacity', '0'));
+
+    link.append('title')
+      .text((d) => `${graph.nodes[d.source.index].name} → ${graph.nodes[d.target.index].name}\n${d.value} astronaut(s)`);
+
+    const node = svg.append('g')
+      .selectAll('g')
+      .data(graph.nodes)
+      .join('g')
+      .attr('transform', (d) => `translate(${d.x0},${d.y0})`);
+
+    node.append('rect')
+      .attr('height', (d) => Math.max(1, d.y1 - d.y0))
+      .attr('width', (d) => d.x1 - d.x0)
+      .attr('fill', (d) => color(d.name))
+      .attr('stroke', '#111')
+      .attr('stroke-width', 0.3);
+
+    node.append('text')
+      .attr('x', (d) => d.x0 < width / 2 ? d.x1 - d.x0 + 6 : -6)
+      .attr('y', (d) => (d.y1 - d.y0) / 2)
+      .attr('dy', '0.35em')
+      .attr('text-anchor', (d) => d.x0 < width / 2 ? 'start' : 'end')
+      .style('font-size', 11)
+      .text((d) => `${d.name} (${Math.round(d.value)})`);
+
+    function findNodeIndex(stageIndex, value) {
+      const key = `${stageIndex}|${value}`;
+      if (nodeIndex.has(key)) return nodeIndex.get(key);
+      return nodeIndex.get(`${stageIndex}|${String(value).trim() || 'Unknown'}`);
+    }
+
+    function nodeCenter(index) {
+      const nodeDatum = graph.nodes[index];
+      return [(nodeDatum.x0 + nodeDatum.x1) / 2, (nodeDatum.y0 + nodeDatum.y1) / 2];
+    }
+
+    const overlayG = svg.append('g').attr('class', 'artemis-overlay');
+    const drawDuration = 3000;
+    const dotDuration = 2000;
+    const stagger = 300;
+    const dotRadius = 4;
+
+    artemisAstronauts.forEach((astronaut, index) => {
+      const seq = stages.map((stage, stageIndex) => findNodeIndex(stageIndex, astronaut[stage] ?? 'Unknown'));
+      if (seq.some((item) => typeof item === 'undefined')) return;
+
+      const points = seq.map((item) => nodeCenter(item));
+      const lineBuilder = d3.line().curve(d3.curveMonotoneX).x((d) => d[0]).y((d) => d[1]);
+      const pathData = lineBuilder(points);
+      if (!pathData) return;
+
+      const pathColor = d3.schemeTableau10[index % d3.schemeTableau10.length] || '#34c9eb';
+      const path = overlayG.append('path')
+        .attr('d', pathData)
+        .attr('fill', 'none')
+        .attr('stroke', '#34c9eb')
+        .attr('stroke-width', 4)
+        .attr('opacity', 0.72)
+        .style('pointer-events', 'stroke')
+        .on('pointermove', (event) => {
+          tooltip
+            .style('opacity', '1')
+            .html(astronaut.name)
+            .style('left', `${event.offsetX + 14}px`)
+            .style('top', `${event.offsetY - 12}px`);
+        })
+        .on('pointerleave', () => tooltip.style('opacity', '0'));
+
+      requestAnimationFrame(() => {
+        const total = path.node().getTotalLength();
+        path.attr('stroke-dasharray', total).attr('stroke-dashoffset', total);
+
+        path.transition()
+          .delay(index * stagger)
+          .duration(drawDuration)
+          .ease(d3.easeCubicOut)
+          .attr('stroke-dashoffset', 0);
+
+        const dot = overlayG.append('circle')
+          .attr('r', dotRadius)
+          .attr('fill', pathColor)
+          .attr('opacity', 0.95)
+          .style('pointer-events', 'none');
+
+        dot.transition()
+          .delay(index * stagger)
+          .duration(dotDuration)
+          .ease(d3.easeLinear)
+          .tween('pathTween', () => (t) => {
+            const point = path.node().getPointAtLength(t * total);
+            dot.attr('cx', point.x).attr('cy', point.y);
+          })
+          .on('end', () => {
+            dot.transition().duration(400).attr('opacity', 0).remove();
+          });
+
+        overlayG.append('g')
+          .selectAll('circle')
+          .data(points)
+          .join('circle')
+          .attr('cx', (d) => d[0])
+          .attr('cy', (d) => d[1])
+          .attr('r', 2)
+          .attr('fill', '#222')
+          .attr('opacity', 0.9)
+          .style('pointer-events', 'none');
+      });
+    });
+
+    host.append(svg.node());
+  }
+
+  renderAstronautSankey();
+</script>

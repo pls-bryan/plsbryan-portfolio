@@ -1,0 +1,14 @@
+{
+  "name": "04c3be777819339e",
+  "main": "04c3be777819339e@185.js",
+  "version": "185.0.0",
+  "homepage": "https://observablehq.com/d/04c3be777819339e",
+  "author": {
+    "name": "Columbia Dataviz ",
+    "url": "https://observablehq.com/@columbia-dataviz"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}

@@ -1,0 +1,328 @@
+---
+const csvUrl = '/graphics/astro-vizs/files/928c412ab4df44841ae69f2f3791c0322d01f19a218c549122363ee5b1dc9c54bdb9032cfa8185808e597878fe519b39fdf771d5ee81b33a85ffc6dabb9031b4.csv';
+---
+
+<section class="viz-band">
+  <div class="viz-copy">
+    <h2>Astronaut Grid</h2>
+    <p>Nationality by occupation, split by sex, with Artemis II crew members highlighted in their cells.</p>
+  </div>
+  <div class="viz-frame">
+    <div id="astronaut-grid" class="viz-canvas viz-canvas--grid"></div>
+  </div>
+</section>
+
+<script>
+  import * as d3 from 'd3';
+
+  const csvUrl = '/graphics/astro-vizs/files/928c412ab4df44841ae69f2f3791c0322d01f19a218c549122363ee5b1dc9c54bdb9032cfa8185808e597878fe519b39fdf771d5ee81b33a85ffc6dabb9031b4.csv';
+  const artemisAstronauts = [
+    { name: 'Reid Wiseman', nationality: 'U.S.', occupation: 'commander', sex: 'male', year_of_selection: '2009', military_civilian: 'military' },
+    { name: 'Victor Glover', nationality: 'U.S.', occupation: 'pilot', sex: 'male', year_of_selection: '2013', military_civilian: 'military' },
+    { name: 'Christina Koch', nationality: 'U.S.', occupation: 'Mission Specialist', sex: 'female', year_of_selection: '2013', military_civilian: 'civilian' },
+    { name: 'Jeremy Hansen', nationality: 'Canada', occupation: 'Mission Specialist', sex: 'male', year_of_selection: '2009', military_civilian: 'military' },
+  ];
+
+  const occupationFix = {
+    Pilot: 'pilot',
+    'Flight engineer': 'flight engineer',
+    MSP: 'Mission Specialist',
+    PSP: 'Payload Specialist',
+    'Other (Space tourist)': 'Other (space tourist)',
+    'spaceflight participant': 'Other (space tourist)',
+    'Space tourist': 'Other (space tourist)',
+  };
+
+  const nationalityFix = {
+    'U.K./U.S.': 'U.S.',
+  };
+
+  function normalizeAstronauts(rows) {
+    return rows.map((row) => ({
+      ...row,
+      occupation: occupationFix[String(row.occupation).trim()] ?? String(row.occupation).trim(),
+      nationality: nationalityFix[String(row.nationality).trim()] ?? String(row.nationality).trim(),
+    }));
+  }
+
+  async function renderAstronautGrid() {
+    const host = document.querySelector('#astronaut-grid');
+    if (!host) return;
+
+    const data = normalizeAstronauts(await d3.csv(csvUrl));
+    const seenNums = new Set();
+    const unique = data.filter((d) => {
+      if (seenNums.has(d.number)) return false;
+      seenNums.add(d.number);
+      return true;
+    });
+
+    const males = unique.filter((d) => d.sex === 'male');
+    const females = unique.filter((d) => d.sex === 'female');
+    const occupations = [...new Set(unique.map((d) => d.occupation))].sort();
+    const nationalities = [...new Set(unique.map((d) => d.nationality))].sort();
+
+    const cellW = 40;
+    const cellH = 18;
+    const gridW = occupations.length * cellW;
+    const gridH = nationalities.length * cellH;
+    const mt = 52;
+    const mb = 112;
+    const ml = 160;
+    const mr = 24;
+    const facetGap = 72;
+    const legendH = 12;
+    const legendW = Math.min(180, gridW);
+    const totalW = ml + gridW * 2 + facetGap + mr;
+    const totalH = mt + gridH + mb;
+
+    const xScale = d3.scaleBand().domain(occupations).range([0, gridW]).padding(0.04);
+    const yScale = d3.scaleBand().domain(nationalities).range([0, gridH]).padding(0.04);
+
+    function buildCountMap(subset) {
+      const map = new Map();
+      for (const nat of nationalities) {
+        for (const occ of occupations) {
+          map.set(`${nat}||${occ}`, 0);
+        }
+      }
+      for (const row of subset) {
+        const key = `${row.nationality}||${row.occupation}`;
+        if (map.has(key)) map.set(key, map.get(key) + 1);
+      }
+      return map;
+    }
+
+    const maleMap = buildCountMap(males);
+    const femaleMap = buildCountMap(females);
+    const globalMax = d3.max([...maleMap.values(), ...femaleMap.values()]) ?? 1;
+    const colorScale = d3.scaleSequential().domain([1, globalMax]).interpolator(d3.interpolateBlues);
+
+    host.innerHTML = '';
+
+    const tooltip = d3.select(host)
+      .append('div')
+      .attr('class', 'viz-tooltip')
+      .style('opacity', '0');
+
+    const svg = d3.create('svg')
+      .attr('viewBox', `0 0 ${totalW} ${totalH}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .attr('aria-label', 'Astronaut grid chart')
+      .style('width', '100%')
+      .style('height', 'auto')
+      .style('display', 'block')
+      .style('font-family', 'Inter, ui-sans-serif, system-ui, sans-serif')
+      .style('font-size', '11px');
+
+    const defs = svg.append('defs');
+    const grad = defs.append('linearGradient').attr('id', 'astronaut-grid-grad');
+    d3.range(0, 1.01, 0.1).forEach((t) => {
+      grad.append('stop')
+        .attr('offset', `${t * 100}%`)
+        .attr('stop-color', colorScale(1 + t * (globalMax - 1)));
+    });
+
+    function showTooltip(event, lines) {
+      tooltip
+        .style('opacity', '1')
+        .html(lines.join('<br>'))
+        .style('left', `${event.offsetX + 14}px`)
+        .style('top', `${event.offsetY - 12}px`);
+    }
+
+    function hideTooltip() {
+      tooltip.style('opacity', '0');
+    }
+
+    function drawFacet(parentG, countMap, title, artemisSubset, showYAxis) {
+      parentG.append('text')
+        .attr('x', gridW / 2)
+        .attr('y', -22)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '13px')
+        .style('font-weight', '600')
+        .text(title);
+
+      for (const nat of nationalities) {
+        for (const occ of occupations) {
+          const count = countMap.get(`${nat}||${occ}`) || 0;
+          const x = xScale(occ);
+          const y = yScale(nat);
+          const bw = xScale.bandwidth();
+          const bh = yScale.bandwidth();
+
+          const cell = parentG.append('rect')
+            .attr('x', x)
+            .attr('y', y)
+            .attr('width', bw)
+            .attr('height', bh)
+              .attr('rx', 1.5)
+            .attr('fill', count === 0 ? '#ebebeb' : colorScale(count))
+            .attr('stroke', '#fff')
+              .attr('stroke-width', 1.2)
+            .on('pointermove', (event) => {
+              showTooltip(event, [`${nat} / ${occ}`, `Count: ${count}`]);
+            })
+            .on('pointerleave', hideTooltip);
+
+          cell.append('title').text(`${nat} / ${occ}\nCount: ${count}`);
+
+          if (count > 0) {
+            parentG.append('text')
+              .attr('x', x + bw / 2)
+              .attr('y', y + bh / 2 + 4)
+              .attr('text-anchor', 'middle')
+              .style('font-size', '9px')
+              .style('fill', count >= globalMax * 0.55 ? '#fff' : '#333')
+              .style('pointer-events', 'none')
+              .text(count);
+          }
+        }
+      }
+
+      for (const astronaut of artemisSubset) {
+        const x = xScale(astronaut.occupation);
+        const y = yScale(astronaut.nationality);
+        if (x === undefined || y === undefined) continue;
+
+        const bw = xScale.bandwidth();
+        const bh = yScale.bandwidth();
+        const finalR = Math.min(bw, bh) / 2;
+        const startR = finalR * 5;
+        const startY = y + bh / 2 - 20;
+
+        const circle = parentG.append('circle')
+          .attr('cx', x + bw / 2)
+          .attr('cy', startY)
+          .attr('r', startR)
+          .attr('fill', 'none')
+          .attr('stroke', '#e07b00')
+          .attr('stroke-width', 2.5)
+          .style('cursor', 'pointer')
+          .on('pointermove', (event) => {
+            showTooltip(event, [astronaut.name, `${astronaut.nationality} / ${astronaut.occupation}`]);
+          })
+          .on('pointerleave', hideTooltip);
+
+        circle.transition()
+          .duration(2000)
+          .ease(d3.easeBackOut.overshoot(1.7))
+          .attr('cy', y + bh / 2)
+          .attr('r', finalR);
+      }
+
+      const xAxis = parentG.append('g')
+        .attr('transform', `translate(0,${gridH})`)
+        .call(d3.axisBottom(xScale).tickSize(3).tickPadding(4));
+
+      xAxis.select('.domain').remove();
+      xAxis.selectAll('text')
+        .style('text-anchor', 'end')
+        .attr('transform', 'rotate(-40)')
+        .attr('dx', '-0.5em')
+        .attr('dy', '0.1em')
+        .style('font-size', '10px');
+
+      if (showYAxis) {
+        const yAxis = parentG.append('g')
+          .call(d3.axisLeft(yScale).tickSize(3).tickPadding(5));
+        yAxis.select('.domain').remove();
+        yAxis.selectAll('text').style('font-size', '10px');
+      }
+    }
+
+    const gMale = svg.append('g').attr('transform', `translate(${ml},${mt})`);
+    drawFacet(gMale, maleMap, 'Male', artemisAstronauts.filter((d) => d.sex === 'male'), true);
+
+    const gFemale = svg.append('g').attr('transform', `translate(${ml + gridW + facetGap},${mt})`);
+    drawFacet(gFemale, femaleMap, 'Female', artemisAstronauts.filter((d) => d.sex === 'female'), false);
+
+    svg.append('text')
+      .attr('x', ml + gridW + facetGap / 2)
+      .attr('y', mt + gridH + 88)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '11px')
+      .style('fill', '#555')
+      .text('Occupation');
+
+    svg.append('text')
+      .attr('transform', `translate(16, ${mt + gridH / 2}) rotate(-90)`)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '11px')
+      .style('fill', '#555')
+      .text('Nationality');
+
+    const legX = ml;
+    const legY = mt + gridH + 60;
+
+    svg.append('text')
+      .attr('x', legX)
+      .attr('y', legY - 5)
+      .style('font-size', '9px')
+      .style('fill', '#555')
+      .text('Count');
+
+    svg.append('rect')
+      .attr('x', legX)
+      .attr('y', legY)
+      .attr('width', legendW)
+      .attr('height', legendH)
+      .attr('rx', 1.5)
+      .attr('fill', 'url(#astronaut-grid-grad)');
+
+    svg.append('rect')
+      .attr('x', legX + legendW + 10)
+      .attr('y', legY)
+      .attr('width', legendH)
+      .attr('height', legendH)
+      .attr('rx', 2)
+      .attr('fill', '#ebebeb')
+      .attr('stroke', '#ccc')
+      .attr('stroke-width', 0.5);
+
+    svg.append('text')
+      .attr('x', legX + legendW + 10 + legendH + 4)
+      .attr('y', legY + legendH - 2)
+      .style('font-size', '9px')
+      .style('fill', '#555')
+      .text('0');
+
+    svg.append('text')
+      .attr('x', legX)
+      .attr('y', legY + legendH + 12)
+      .style('font-size', '9px')
+      .style('fill', '#555')
+      .text('1');
+
+    svg.append('text')
+      .attr('x', legX + legendW)
+      .attr('y', legY + legendH + 12)
+      .attr('text-anchor', 'end')
+      .style('font-size', '9px')
+      .style('fill', '#555')
+      .text(globalMax);
+
+    const artLegX = legX + legendW + 70;
+    const artLegY = legY + legendH / 2;
+
+    svg.append('circle')
+      .attr('cx', artLegX)
+      .attr('cy', artLegY)
+      .attr('r', 4.5)
+      .attr('fill', 'none')
+      .attr('stroke', '#e07b00')
+      .attr('stroke-width', 1.8);
+
+    svg.append('text')
+      .attr('x', artLegX + 10)
+      .attr('y', artLegY + 4)
+      .style('font-size', '9px')
+      .style('fill', '#555')
+      .text('Artemis astronaut');
+
+    host.append(svg.node());
+  }
+
+  renderAstronautGrid();
+</script>
