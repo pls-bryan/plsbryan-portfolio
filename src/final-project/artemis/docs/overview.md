@@ -4,7 +4,7 @@ This project is an article-style data visualization piece about NASA, Artemis II
 
 What does the Artemis mission, and specifically a successful Artemis II mission, reveal about NASA's relationship to private industry, and how has that relationship changed over time?
 
-The Artemis page at `src/pages/artemis.astro` is the primary working page for that final project. In its current state it functions as an interactive rocket dashboard plus supporting graphics. In its final state it should become a narrative article with these elements interleaved through the story:
+The Artemis route at `src/pages/artemis.astro` now points to the main project workspace at `src/final-project/artemis/page/ArtemisPage.astro`. In its current state it functions as an interactive rocket dashboard plus supporting graphics. In its final state it should become a narrative article with these elements interleaved through the story:
 
 - explanatory text blocks
 - the Artemis / Apollo rocket comparison graphic
@@ -24,10 +24,18 @@ When adding new graphics, labels, or interactions, prefer choices that sharpen t
 
 # Current Primary Page
 
-- Main page: `src/pages/artemis.astro`
-- Main Artemis SVG: `public/graphics/sls-diagram-02.svg`
-- Main Apollo SVG: `public/graphics/apollo/saturn-v-diagram-01.svg`
-- Apollo contractor source text: `public/graphics/apollo/Apollo Contractors.txt`
+- Route entry: `src/pages/artemis.astro`
+- Main project workspace: `src/final-project/artemis/`
+- Page implementation: `src/final-project/artemis/page/ArtemisPage.astro`
+- Project docs: `src/final-project/artemis/docs/`
+- Project overview: `src/final-project/artemis/docs/overview.md`
+- Project outline: `src/final-project/artemis/docs/final-project-outline.txt`
+- Rocket source assets: `public/final-project/artemis/rockets/`
+- Artemis rocket assets: `public/final-project/artemis/rockets/artemis/`
+- Apollo rocket assets: `public/final-project/artemis/rockets/apollo/`
+- Main Artemis SVG: `public/final-project/artemis/rockets/artemis/sls-diagram-02.svg`
+- Main Apollo SVG: `public/final-project/artemis/rockets/apollo/saturn-v-diagram-01.svg`
+- Apollo contractor source text: `public/final-project/artemis/rockets/apollo/Apollo Contractors.txt`
 
 The current page includes:
 
@@ -40,7 +48,7 @@ The current page includes:
 
 Preservation rule:
 
-- The current rocket dashboard in `src/pages/artemis.astro` is the stable reference implementation and should be preserved while article copy is developed around it.
+- The current rocket dashboard in `src/final-project/artemis/page/ArtemisPage.astro` is the stable reference implementation and should be preserved while article copy is developed around it.
 - During article-writing passes, default to editing only the article text above the dashboard unless a diagram change is explicitly requested.
 - Do not restyle, replace, or restructure the current dashboard as part of article drafting work.
 
@@ -56,7 +64,7 @@ These rules are intentional and should be preserved unless there is a specific r
 - This is a hardcoded design choice so one side reads as exterior shell while the other side reads as an exposed internal/cutaway hover surface.
 - Do not convert the booster hide rule back into a normalized group hide, or the right-side cutaway booster will disappear too.
 - `foward-skirt-avionics` and `nozzle` are currently intentionally hidden as normalized part groups to reduce overlap and visual clutter on both sides.
-- Mirrored `-2` Artemis SVG ids depend on the `normalizeId()` logic in `src/pages/artemis.astro`. Do not remove that normalization unless the SVG mapping system is rewritten.
+- Mirrored `-2` Artemis SVG ids depend on the `normalizeId()` logic in `src/final-project/artemis/page/ArtemisPage.astro`. Do not remove that normalization unless the SVG mapping system is rewritten.
 
 ## Apollo diagram
 
@@ -68,9 +76,9 @@ These rules are intentional and should be preserved unless there is a specific r
 
 The rocket diagrams follow a specific pipeline. Keep this stable.
 
-1. Start with a manually prepared SVG in `public/graphics/...`.
+1. Start with a manually prepared SVG in `public/final-project/artemis/rockets/<rocket-name>/...`.
 2. Ensure meaningful shape or group ids exist for each interactive region.
-3. Map SVG ids to part metadata in `src/pages/artemis.astro`.
+3. Map SVG ids to part metadata in `src/final-project/artemis/page/ArtemisPage.astro`.
 4. Use `normalizeId()` so mirrored or numbered ids like `part-2` resolve to the same metadata entry when appropriate.
 5. Inject interactivity at render time with `renderRocketSvg()`.
 6. Drive both contractor mode and price mode from the same mapped part metadata.
@@ -81,7 +89,7 @@ Implementation notes:
 - Price highlighting uses shared `priceGroup` keys, so grouped-cost subsystems should highlight together.
 - Tooltip text and left-panel detail text should remain confined to the dashboard component and wrap safely.
 - Long part names, contractor labels, price labels, descriptions, and notes in the diagram panel must never overflow their container.
-- Preserve the existing text-wrap safeguards in `src/pages/artemis.astro`, including `min-width: 0`, `max-width: 100%`, and `overflow-wrap: anywhere` on the detail and tooltip text blocks.
+- Preserve the existing text-wrap safeguards in `src/final-project/artemis/page/ArtemisPage.astro`, including `min-width: 0`, `max-width: 100%`, and `overflow-wrap: anywhere` on the detail and tooltip text blocks.
 - If an element is omitted, check `hiddenParts`, then SVG ids, then the part mapping object.
 - The page now distinguishes between exact hidden SVG ids and normalized hidden part groups. Use exact-id hiding when only one mirrored side should disappear.
 - When translating visual spacing or offsets into code, account for the real rendered width of nearby components like keys, toggles, and diagrams so they do not overlap or overflow.
@@ -113,7 +121,7 @@ The current visual language is deliberate.
 
 # Reusable Inline Diagram Pattern
 
-The current inline article diagram treatment in `src/pages/artemis.astro` should be reused for future diagrams in this article unless there is a specific reason to break pattern.
+The current inline article diagram treatment in `src/final-project/artemis/page/ArtemisPage.astro` should be reused for future diagrams in this article unless there is a specific reason to break pattern.
 
 - Center the rocket itself on the article reading axis.
 - Place the key or price scale on the left side of the rocket.
@@ -125,7 +133,7 @@ The current inline article diagram treatment in `src/pages/artemis.astro` should
 
 # Data Model Notes
 
-Within `src/pages/artemis.astro`, the main structures currently are:
+Within `src/final-project/artemis/page/ArtemisPage.astro`, the main structures currently are:
 
 - `contractorStyles`
 - `contractorKeyOrder`
