@@ -1,8 +1,6 @@
 ---
 import fs from 'node:fs';
 import path from 'node:path';
-import AstronautGrid from '../components/artemis/AstronautGrid.astro';
-import AstronautSankey from '../components/artemis/AstronautSankey.astro';
 
 const contractorStyles = {
   'Northrop Grumman': { color: '#f5df2e' },
@@ -418,6 +416,14 @@ const artemisParts = {
   },
 };
 
+const artemisContractors = new Set(Object.values(artemisParts).map((part) => part.contractor));
+const artemisContractorKey = contractorKey
+  .filter((item) => artemisContractors.has(item.name))
+  .map((item) => ({
+    ...item,
+    children: item.children.filter((child) => artemisContractors.has(child.name)),
+  }));
+
 const apolloParts = {
   'launch-escape-system': {
     part: 'Launch Escape Module',
@@ -608,11 +614,10 @@ function mixHex(from, to, t) {
   });
 }
 
-const priceAmounts = Object.values(priceGroups).map((group) => group.amount);
-const minPriceAmount = Math.min(...priceAmounts);
-const maxPriceAmount = Math.max(...priceAmounts);
-const minPriceLabel = `$${(minPriceAmount / 1000000).toFixed(1)}M`;
-const maxPriceLabel = `$${(maxPriceAmount / 1000000000).toFixed(1)}B`;
+const minPriceAmount = 3000000;
+const maxPriceAmount = 10000000000;
+const minPriceLabel = '$3M';
+const maxPriceLabel = '$10B';
 const defaultPriceScaleExponent = 0.6;
 
 function priceColor(amount) {
@@ -691,6 +696,8 @@ const rocketSlides = rockets.map((rocket) => ({
   ...rocket,
   svg: renderRocketSvg(rocket),
 }));
+
+const artemisSlide = rocketSlides.find((rocket) => rocket.slug === 'artemis');
 ---
 
 <!doctype html>
@@ -737,10 +744,188 @@ const rocketSlides = rockets.map((rocket) => ({
         gap: 0;
       }
 
+      .diagram-panel {
+        position: relative;
+      }
+
+      .article-intro {
+        padding: 34px 28px 30px;
+        border-bottom: 1px solid var(--line);
+        background: #fbfbf8;
+      }
+
+      .article-intro__inner {
+        width: min(100%, 920px);
+        margin: 0 auto;
+        display: grid;
+        gap: 14px;
+      }
+
+      .article-kicker {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .article-title {
+        margin: 0;
+        max-width: 12ch;
+        font-size: clamp(2.6rem, 6vw, 5.5rem);
+        line-height: 0.94;
+        letter-spacing: -0.03em;
+      }
+
+      .article-subtitle {
+        margin: 0;
+        max-width: 42rem;
+        color: var(--muted);
+        font-size: 1.08rem;
+        line-height: 1.5;
+      }
+
+      .article-copy {
+        margin: 6px 0 0;
+        max-width: 42rem;
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+
       .page {
         min-height: 100vh;
         display: grid;
         grid-template-columns: minmax(250px, 330px) 1fr;
+      }
+
+      /* Reusable inline article diagram pattern: centered rocket, left key/scale, optional right toggle. */
+      .inline-diagram {
+        width: 100%;
+        margin: 10px auto 10px;
+        position: relative;
+        display: block;
+        min-height: 620px;
+      }
+
+      .inline-diagram--parts {
+        min-height: 620px;
+      }
+
+      .inline-diagram .panel {
+        position: static;
+        top: auto;
+        height: 620px;
+        min-height: 620px;
+        width: 112px;
+        padding: 0 2px 64px 0;
+        gap: 10px;
+        border-right: 0;
+        background: transparent;
+        justify-content: flex-end;
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(calc(-50% - 186px));
+      }
+
+      .inline-diagram--parts .panel {
+        width: 182px;
+        padding: 0 6px 86px 0;
+        transform: translateX(calc(-50% - 204px));
+      }
+
+      .inline-diagram--parts .mode-toggle {
+        position: absolute;
+        left: 50%;
+        bottom: 64px;
+        transform: translateX(112px);
+        width: auto;
+      }
+
+      .inline-diagram--parts .mode-button {
+        padding: 6px 11px;
+        font-size: 0.66rem;
+      }
+
+      .inline-diagram .stage {
+        min-height: 620px;
+        height: 620px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        width: 100%;
+      }
+
+      .inline-diagram .rocket-shell {
+        min-height: auto;
+        width: 100%;
+      }
+
+      .inline-diagram .rocket-window {
+        width: min(100%, 420px);
+      }
+
+      .inline-diagram .rocket-label {
+        letter-spacing: 0.12em;
+      }
+
+      .inline-diagram .rocket-svg {
+        width: min(100%, 350px);
+        height: 600px;
+      }
+
+      .inline-diagram .price-legend {
+        gap: 6px;
+      }
+
+      .inline-diagram .price-copy,
+      .inline-diagram .price-missing {
+        display: none;
+      }
+
+      .inline-diagram .price-legend h2 {
+        margin-bottom: 2px;
+        font-size: 0.72rem;
+      }
+
+      .inline-diagram .price-gradient {
+        height: 12px;
+      }
+
+      .inline-diagram .price-scale {
+        gap: 6px;
+        font-size: 0.68rem;
+        line-height: 1.2;
+      }
+
+      .inline-diagram .key {
+        gap: 8px;
+      }
+
+      .inline-diagram .key h2 {
+        margin-bottom: 2px;
+        font-size: 0.72rem;
+      }
+
+      .inline-diagram .key-row {
+        grid-template-columns: 14px 1fr;
+        gap: 8px;
+        font-size: 0.78rem;
+      }
+
+      .inline-diagram--parts .key-row {
+        font-size: 0.74rem;
+      }
+
+      .inline-diagram .key-children {
+        gap: 6px;
+        padding-left: 22px;
+      }
+
+      .inline-diagram .swatch {
+        width: 14px;
+        height: 14px;
       }
 
       .panel {
@@ -848,11 +1033,11 @@ const rocketSlides = rockets.map((rocket) => ({
         gap: 12px;
       }
 
-      .page-shell.is-price-mode .contractor-key {
+      .diagram-panel.is-price-mode .contractor-key {
         display: none;
       }
 
-      .page-shell.is-price-mode .price-legend {
+      .diagram-panel.is-price-mode .price-legend {
         display: grid;
       }
 
@@ -1096,11 +1281,11 @@ const rocketSlides = rockets.map((rocket) => ({
       }
 
       .tooltip {
-        position: fixed;
+        position: absolute;
         z-index: 20;
         left: 0;
         top: 0;
-        max-width: min(280px, calc(100vw - 28px));
+        max-width: min(280px, calc(100% - 28px));
         padding: 10px 12px;
         border: 1px solid rgba(0, 0, 0, 0.18);
         background: rgba(255, 255, 255, 0.96);
@@ -1129,11 +1314,6 @@ const rocketSlides = rockets.map((rocket) => ({
         font-size: 0.82rem;
         line-height: 1.3;
         overflow-wrap: anywhere;
-      }
-
-      .viz-stack {
-        display: grid;
-        gap: 0;
       }
 
       .bibliography {
@@ -1227,8 +1407,61 @@ const rocketSlides = rockets.map((rocket) => ({
       }
 
       @media (max-width: 780px) {
+        .article-intro {
+          padding: 26px 22px 24px;
+        }
+
+        .article-title {
+          max-width: none;
+          font-size: 2.8rem;
+        }
+
         .page {
           grid-template-columns: 1fr;
+        }
+
+        .inline-diagram {
+          min-height: 0;
+          gap: 12px;
+          position: static;
+          display: grid;
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .inline-diagram .panel {
+          position: static;
+          transform: none;
+          width: auto;
+          padding: 0;
+          height: auto;
+          min-height: 0;
+          justify-content: flex-start;
+        }
+
+        .inline-diagram .stage {
+          padding: 0;
+          height: auto;
+          min-height: auto;
+        }
+
+        .inline-diagram--parts .mode-toggle {
+          position: static;
+          transform: none;
+          justify-self: start;
+          margin-top: 4px;
+        }
+
+        .inline-diagram .rocket-window {
+          width: 100%;
+        }
+
+        .inline-diagram .rocket-svg {
+          height: auto;
+        }
+
+        .inline-diagram .details {
+          overflow: visible;
         }
 
         .panel {
@@ -1309,7 +1542,117 @@ const rocketSlides = rockets.map((rocket) => ({
   </head>
   <body>
     <main class="page-shell">
-      <section class="page">
+      <section class="article-intro" aria-labelledby="article-title">
+        <div class="article-intro__inner">
+          <p class="article-kicker">Project Draft</p>
+          <h1 class="article-title" id="article-title">Artemis II and the New Contractor State</h1>
+          <p class="article-subtitle">A working article about what the Artemis program reveals about NASA’s dependence on private industry, and how that relationship has changed since Apollo.</p>
+          <p class="article-copy">Artemis II, which safely returned last weekend, marked a historic return to manned lunar spaceflight, but it is also a historic launch because of the scale of industrial coordination required to make it possible.</p>
+          <p class="article-copy">The broader Artemis program carries an unprecedented budget measured in the tens of billions of dollars, and a large share of that cost comes from the fact that so many parts of the launch stack had to be custom designed, manufactured, integrated, and certified for this mission architecture in order for the SLS to be “the only rocket that can send Orion, astronauts, and supplies to the Moon in a single mission.”</p>
+
+          <section class="inline-diagram diagram-panel is-price-mode" data-diagram-panel data-initial-mode="prices" data-inline-simple="true" aria-label="Diagram 1: Artemis II price diagram">
+            <aside class="panel" aria-label="Artemis II price key">
+              <section class="price-legend" aria-labelledby="inline-price-title">
+                <h2 id="inline-price-title">Price Scale</h2>
+                <div class="price-gradient" aria-hidden="true"></div>
+                <div class="price-scale">
+                  <span>min: {minPriceLabel}</span>
+                  <span>max: {maxPriceLabel}</span>
+                </div>
+              </section>
+            </aside>
+
+            <section class="stage" aria-label="Inline Artemis II price diagram">
+              <div class="rocket-shell">
+                <div class="rocket-window">
+                  <article class="rocket-slide" aria-label={artemisSlide?.label}>
+                    <span class="rocket-label">{artemisSlide?.label}</span>
+                    <div set:html={artemisSlide?.svg ?? ''} />
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <div class="tooltip" data-tooltip aria-hidden="true">
+              <strong data-tooltip-part></strong>
+              <span data-tooltip-contractor></span>
+              <span data-tooltip-price></span>
+              <span data-tooltip-description></span>
+            </div>
+          </section>
+
+          <p class="article-copy">As said, Artemis is an unprecedented mission in terms of its scope and scale. Of course, this means it couldn’t have been done alone. For Artemis, NASA turned to its reliable team of private contractors. NASA’s team is a highly specialized network that the organization has been in collaboration with since lunar spaceflight was first conceptualized in the 1960s. Let’s take a closer look at the companies that made the Artemis II launch happen:</p>
+
+          <section class="inline-diagram inline-diagram--parts diagram-panel" data-diagram-panel data-initial-mode="contractors" data-inline-price-simple="true" aria-label="Diagram 2: Artemis II parts diagram">
+            <aside class="panel" aria-label="Artemis II contractor key">
+              <section class="price-legend" aria-labelledby="inline-parts-price-title">
+                <h2 id="inline-parts-price-title">Price Scale</h2>
+                <div class="price-gradient" aria-hidden="true"></div>
+                <div class="price-scale">
+                  <span>min: {minPriceLabel}</span>
+                  <span>max: {maxPriceLabel}</span>
+                </div>
+              </section>
+
+              <section class="key contractor-key" aria-labelledby="inline-contractor-title">
+                <h2 id="inline-contractor-title">Key</h2>
+                {
+                  artemisContractorKey.map((item) => (
+                    <div class="key-group">
+                      <div class="key-row">
+                        <span class="swatch" style={`background: ${item.color}`} aria-hidden="true" />
+                        <span class="key-copy">
+                          <span>{item.name}</span>
+                        </span>
+                      </div>
+
+                      {item.children.length > 0 && (
+                        <div class="key-children">
+                          {item.children.map((child) => (
+                            <div class="key-row">
+                              <span class="swatch" style={`background: ${child.color}`} aria-hidden="true" />
+                              <span class="key-copy">
+                                <span>{child.name}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+              </section>
+            </aside>
+
+            <section class="stage" aria-label="Inline Artemis II parts diagram">
+              <div class="rocket-shell">
+                <div class="mode-toggle" role="tablist" aria-label="Diagram 2 data mode">
+                  <button class="mode-button is-active" type="button" data-mode-button data-mode="contractors" aria-selected="true">Contractors</button>
+                  <button class="mode-button" type="button" data-mode-button data-mode="prices" aria-selected="false">Prices</button>
+                </div>
+
+                <div class="rocket-window">
+                  <article class="rocket-slide" aria-label={artemisSlide?.label}>
+                    <span class="rocket-label">{artemisSlide?.label}</span>
+                    <div set:html={artemisSlide?.svg ?? ''} />
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <div class="tooltip" data-tooltip aria-hidden="true">
+              <strong data-tooltip-part></strong>
+              <span data-tooltip-contractor></span>
+              <span data-tooltip-price></span>
+              <span data-tooltip-description></span>
+            </div>
+          </section>
+
+          <p class="article-copy">Taking both of these charts together now, we can see for example that the most expensive section of the Artemis II SLS was the Core Stage, and that the Core Stage was designed and fabricated primarily by Boeing. Boeing has been at the heart of NASA’s spaceflight enterprise, having a hand in basically all of its missions since the initial 20th century Space Race.</p>
+        </div>
+      </section>
+
+      <section class="page diagram-panel" data-diagram-panel data-initial-mode="contractors" data-slide-count={rocketSlides.length}>
         <aside class="panel" aria-label="Artemis II contractor key">
           <div>
             <h1>Artemis II</h1>
@@ -1430,12 +1773,13 @@ const rocketSlides = rockets.map((rocket) => ({
               </svg>
             </button>
           </div>
-        </section>
-      </section>
 
-      <section class="viz-stack" aria-label="Artemis data visualizations">
-        <AstronautGrid />
-        <AstronautSankey />
+          <div class="tooltip" data-tooltip aria-hidden="true">
+            <strong data-tooltip-part></strong>
+            <span data-tooltip-contractor></span>
+            <span data-tooltip-price></span>
+          </div>
+        </section>
       </section>
 
       <section class="bibliography" aria-labelledby="bibliography-title">
@@ -1453,220 +1797,230 @@ const rocketSlides = rockets.map((rocket) => ({
       </section>
     </main>
 
-    <div class="tooltip" data-tooltip aria-hidden="true">
-      <strong data-tooltip-part></strong>
-      <span data-tooltip-contractor></span>
-      <span data-tooltip-price></span>
-    </div>
-
     <script>
-      const pageShell = document.querySelector('.page-shell');
-      const parts = Array.from(document.querySelectorAll('.artemis-part'));
-      const tooltip = document.querySelector('[data-tooltip]');
-      const tooltipPart = document.querySelector('[data-tooltip-part]');
-      const tooltipContractor = document.querySelector('[data-tooltip-contractor]');
-      const tooltipPrice = document.querySelector('[data-tooltip-price]');
-      const detailsName = document.querySelector('[data-details-name]');
-      const detailsContractor = document.querySelector('[data-details-contractor]');
-      const detailsPrice = document.querySelector('[data-details-price]');
-      const detailsDescription = document.querySelector('[data-details-description]');
-      const detailsNote = document.querySelector('[data-details-note]');
-      const modeButtons = Array.from(document.querySelectorAll('[data-mode-button]'));
-      const slider = document.querySelector('[data-rocket-slider]');
-      const track = document.querySelector('[data-rocket-track]');
-      const prevButton = document.querySelector('[data-slider-prev]');
-      const nextButton = document.querySelector('[data-slider-next]');
-      const pips = Array.from(document.querySelectorAll('[data-slider-pip]'));
-      const slideCount = Number(slider?.dataset.slideCount ?? 0);
-      let currentSlide = 0;
-      let currentMode = 'contractors';
+      function initDiagramPanel(root) {
+        const parts = Array.from(root.querySelectorAll('.artemis-part'));
+        const tooltip = root.querySelector('[data-tooltip]');
+        const tooltipPart = root.querySelector('[data-tooltip-part]');
+        const tooltipContractor = root.querySelector('[data-tooltip-contractor]');
+        const tooltipPrice = root.querySelector('[data-tooltip-price]');
+        const tooltipDescription = root.querySelector('[data-tooltip-description]');
+        const detailsName = root.querySelector('[data-details-name]');
+        const detailsContractor = root.querySelector('[data-details-contractor]');
+        const detailsPrice = root.querySelector('[data-details-price]');
+        const detailsDescription = root.querySelector('[data-details-description]');
+        const detailsNote = root.querySelector('[data-details-note]');
+        const isInlineSimple = root.dataset.inlineSimple === 'true';
+        const isInlinePriceSimple = root.dataset.inlinePriceSimple === 'true';
+        const hasTooltipDescription = Boolean(tooltipDescription);
+        const modeButtons = Array.from(root.querySelectorAll('[data-mode-button]'));
+        const slider = root.querySelector('[data-rocket-slider]');
+        const track = root.querySelector('[data-rocket-track]');
+        const prevButton = root.querySelector('[data-slider-prev]');
+        const nextButton = root.querySelector('[data-slider-next]');
+        const pips = Array.from(root.querySelectorAll('[data-slider-pip]'));
+        const slideCount = Number(slider?.dataset.slideCount ?? root.dataset.slideCount ?? 0);
+        let currentSlide = 0;
+        let currentMode = root.dataset.initialMode ?? 'contractors';
 
-      function getPriceDisplay(target) {
-        const rocket = target.dataset.rocket;
-        const isAvailable = target.dataset.priceAvailable === 'true';
-        const isEstimated = target.dataset.priceEstimated === 'true';
+        function getPriceDisplay(target) {
+          const rocket = target.dataset.rocket;
+          const isAvailable = target.dataset.priceAvailable === 'true';
+          const isEstimated = target.dataset.priceEstimated === 'true';
 
-        if (!isAvailable) {
+          if (!isAvailable) {
+            return {
+              short: 'Price unavailable',
+              long: `Price unavailable · ${rocket}`,
+              note: target.dataset.priceNote || '',
+            };
+          }
+
+          const title = target.dataset.priceTitle;
+          const label = target.dataset.priceLabel;
+          const displayTitle = isEstimated ? `${title} (estimated)` : title;
+
           return {
-            short: 'Price unavailable',
-            long: `Price unavailable · ${rocket}`,
+            short: `${displayTitle} · ${label}`,
+            long: `${displayTitle} · ${label} · ${rocket}`,
             note: target.dataset.priceNote || '',
           };
         }
 
-        const title = target.dataset.priceTitle;
-        const label = target.dataset.priceLabel;
-        const displayTitle = isEstimated ? `${title} (estimated)` : title;
+        function setContent(target) {
+          const part = target.dataset.part;
+          const rocket = target.dataset.rocket;
+          const contractor = target.dataset.contractor;
+          const description = target.dataset.description || '';
+          const priceDisplay = getPriceDisplay(target);
+          const useSimplifiedPriceHover = isInlineSimple || (isInlinePriceSimple && currentMode === 'prices');
 
-        return {
-          short: `${displayTitle} · ${label}`,
-          long: `${displayTitle} · ${label} · ${rocket}`,
-          note: target.dataset.priceNote || '',
-        };
-      }
-
-      function setContent(target) {
-        const part = target.dataset.part;
-        const rocket = target.dataset.rocket;
-        const contractor = target.dataset.contractor;
-        const description = target.dataset.description || '';
-        const priceDisplay = getPriceDisplay(target);
-
-        tooltipPart.textContent = part;
-        tooltipContractor.textContent = `${contractor} · ${rocket}`;
-        tooltipPrice.textContent = priceDisplay.short;
-
-        detailsName.textContent = part;
-        detailsContractor.textContent = `${contractor} · ${rocket}`;
-        detailsPrice.textContent = priceDisplay.long;
-        detailsDescription.textContent = description;
-        detailsNote.textContent = priceDisplay.note || target.dataset.note || '';
-      }
-
-      function showTooltip(target) {
-        setContent(target);
-        tooltip.classList.add('is-visible');
-        tooltip.setAttribute('aria-hidden', 'false');
-      }
-
-      function hideTooltip() {
-        tooltip.classList.remove('is-visible');
-        tooltip.setAttribute('aria-hidden', 'true');
-      }
-
-      function moveTooltip(event) {
-        const offset = 14;
-        const rect = tooltip.getBoundingClientRect();
-        let left = event.clientX + offset;
-        let top = event.clientY + offset;
-
-        if (left + rect.width > window.innerWidth - 10) {
-          left = event.clientX - rect.width - offset;
-        }
-
-        if (top + rect.height > window.innerHeight - 10) {
-          top = event.clientY - rect.height - offset;
-        }
-
-        tooltip.style.transform = `translate3d(${Math.max(10, left)}px, ${Math.max(10, top)}px, 0)`;
-      }
-
-      function clearActiveParts() {
-        parts.forEach((part) => part.classList.remove('is-active'));
-      }
-
-      function getRelatedParts(target) {
-        if (currentMode === 'prices') {
-          const group = target.dataset.priceGroup;
-          if (target.dataset.priceAvailable === 'true' && group) {
-            return parts.filter(
-              (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.priceGroup === group,
-            );
+          tooltipPart.textContent = part;
+          tooltipContractor.textContent = useSimplifiedPriceHover ? description : `${contractor} · ${rocket}`;
+          tooltipPrice.textContent = priceDisplay.short;
+          if (hasTooltipDescription) {
+            tooltipDescription.textContent = useSimplifiedPriceHover ? '' : description;
           }
 
-          return [target];
+          if (detailsName) detailsName.textContent = part;
+          if (detailsContractor) detailsContractor.textContent = `${contractor} · ${rocket}`;
+          if (detailsPrice) detailsPrice.textContent = priceDisplay.long;
+          if (detailsDescription) detailsDescription.textContent = description;
+          if (detailsNote) detailsNote.textContent = priceDisplay.note || target.dataset.note || '';
         }
 
-        const group = target.dataset.partGroup;
-        return parts.filter(
-          (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.partGroup === group,
-        );
-      }
+        function showTooltip(target) {
+          setContent(target);
+          tooltip.classList.add('is-visible');
+          tooltip.setAttribute('aria-hidden', 'false');
+        }
 
-      function activateRelatedParts(target) {
-        clearActiveParts();
-        getRelatedParts(target).forEach((part) => part.classList.add('is-active'));
-      }
+        function hideTooltip() {
+          tooltip.classList.remove('is-visible');
+          tooltip.setAttribute('aria-hidden', 'true');
+        }
 
-      function updateModeButtons() {
-        modeButtons.forEach((button) => {
-          const active = button.dataset.mode === currentMode;
-          button.classList.toggle('is-active', active);
-          button.setAttribute('aria-selected', active ? 'true' : 'false');
-        });
-      }
+        function moveTooltip(event) {
+          const offset = 14;
+          const panelRect = root.getBoundingClientRect();
+          const rect = tooltip.getBoundingClientRect();
+          let left = event.clientX - panelRect.left + offset;
+          let top = event.clientY - panelRect.top + offset;
 
-      function updatePartFills() {
-        parts.forEach((part) => {
-          const fill = currentMode === 'prices'
-            ? part.dataset.priceColor
-            : part.dataset.contractorColor;
-          part.style.setProperty('--part-fill', fill);
-        });
-      }
+          if (left + rect.width > panelRect.width - 10) {
+            left = event.clientX - panelRect.left - rect.width - offset;
+          }
 
-      function updateMode(mode) {
-        currentMode = mode;
-        pageShell?.classList.toggle('is-price-mode', mode === 'prices');
-        updateModeButtons();
-        updatePartFills();
-        clearActiveParts();
-        hideTooltip();
-        detailsName.textContent = 'Rocket component';
-        detailsContractor.textContent = 'Hover or focus a colored region.';
-        detailsPrice.textContent = '';
-        detailsDescription.textContent = '';
-        detailsNote.textContent = '';
-      }
+          if (top + rect.height > panelRect.height - 10) {
+            top = event.clientY - panelRect.top - rect.height - offset;
+          }
 
-      function updateSlider(index) {
-        currentSlide = (index + slideCount) % slideCount;
-        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+          tooltip.style.transform = `translate3d(${Math.max(10, left)}px, ${Math.max(10, top)}px, 0)`;
+        }
 
-        pips.forEach((pip, pipIndex) => {
-          const active = pipIndex === currentSlide;
-          pip.classList.toggle('is-active', active);
-          pip.setAttribute('aria-pressed', active ? 'true' : 'false');
-        });
+        function clearActiveParts() {
+          parts.forEach((part) => part.classList.remove('is-active'));
+        }
 
-        clearActiveParts();
-        hideTooltip();
-      }
+        function getRelatedParts(target) {
+          if (currentMode === 'prices') {
+            const group = target.dataset.priceGroup;
+            if (target.dataset.priceAvailable === 'true' && group) {
+              return parts.filter(
+                (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.priceGroup === group,
+              );
+            }
 
-      parts.forEach((part) => {
-        part.addEventListener('pointerenter', (event) => {
-          activateRelatedParts(part);
-          showTooltip(part);
-          moveTooltip(event);
-        });
+            return [target];
+          }
 
-        part.addEventListener('pointermove', moveTooltip);
-        part.addEventListener('pointerleave', () => {
+          const group = target.dataset.partGroup;
+          return parts.filter(
+            (part) => part.dataset.rocket === target.dataset.rocket && part.dataset.partGroup === group,
+          );
+        }
+
+        function activateRelatedParts(target) {
+          clearActiveParts();
+          getRelatedParts(target).forEach((part) => part.classList.add('is-active'));
+        }
+
+        function updateModeButtons() {
+          modeButtons.forEach((button) => {
+            const active = button.dataset.mode === currentMode;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+        }
+
+        function updatePartFills() {
+          parts.forEach((part) => {
+            const fill = currentMode === 'prices'
+              ? part.dataset.priceColor
+              : part.dataset.contractorColor;
+            part.style.setProperty('--part-fill', fill);
+          });
+        }
+
+        function updateMode(mode) {
+          currentMode = mode;
+          root.classList.toggle('is-price-mode', mode === 'prices');
+          updateModeButtons();
+          updatePartFills();
           clearActiveParts();
           hideTooltip();
-        });
+          if (detailsName) detailsName.textContent = 'Rocket component';
+          if (detailsContractor) detailsContractor.textContent = 'Hover or focus a colored region.';
+          if (detailsPrice) detailsPrice.textContent = '';
+          if (detailsDescription) detailsDescription.textContent = '';
+          if (detailsNote) detailsNote.textContent = '';
+        }
 
-        part.addEventListener('focus', () => {
-          activateRelatedParts(part);
-          setContent(part);
-        });
+        function updateSlider(index) {
+          if (!track || !slideCount) return;
 
-        part.addEventListener('blur', () => {
+          currentSlide = (index + slideCount) % slideCount;
+          track.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+          pips.forEach((pip, pipIndex) => {
+            const active = pipIndex === currentSlide;
+            pip.classList.toggle('is-active', active);
+            pip.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+
           clearActiveParts();
+          hideTooltip();
+        }
+
+        parts.forEach((part) => {
+          part.addEventListener('pointerenter', (event) => {
+            activateRelatedParts(part);
+            showTooltip(part);
+            moveTooltip(event);
+          });
+
+          part.addEventListener('pointermove', moveTooltip);
+          part.addEventListener('pointerleave', () => {
+            clearActiveParts();
+            hideTooltip();
+          });
+
+          part.addEventListener('focus', () => {
+            activateRelatedParts(part);
+            setContent(part);
+          });
+
+          part.addEventListener('blur', () => {
+            clearActiveParts();
+          });
+
+          part.addEventListener('click', () => {
+            activateRelatedParts(part);
+            setContent(part);
+          });
         });
 
-        part.addEventListener('click', () => {
-          activateRelatedParts(part);
-          setContent(part);
+        prevButton?.addEventListener('click', () => updateSlider(currentSlide - 1));
+        nextButton?.addEventListener('click', () => updateSlider(currentSlide + 1));
+
+        pips.forEach((pip) => {
+          pip.addEventListener('click', () => {
+            updateSlider(Number(pip.dataset.slideIndex ?? 0));
+          });
         });
+
+        modeButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            updateMode(button.dataset.mode ?? 'contractors');
+          });
+        });
+
+        updateMode(currentMode);
+      }
+
+      document.querySelectorAll('[data-diagram-panel]').forEach((panel) => {
+        initDiagramPanel(panel);
       });
-
-      prevButton?.addEventListener('click', () => updateSlider(currentSlide - 1));
-      nextButton?.addEventListener('click', () => updateSlider(currentSlide + 1));
-
-      pips.forEach((pip) => {
-        pip.addEventListener('click', () => {
-          updateSlider(Number(pip.dataset.slideIndex ?? 0));
-        });
-      });
-
-      modeButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-          updateMode(button.dataset.mode ?? 'contractors');
-        });
-      });
-
-      updateMode(currentMode);
     </script>
   </body>
 </html>

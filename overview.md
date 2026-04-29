@@ -36,7 +36,13 @@ The current page includes:
 - a universal hover card that always shows part, contractor, and price
 - a left-side details panel that shows the selected part's function and notes
 - a data bibliography
-- supporting visualizations below the rocket dashboard
+- an article intro area above the rocket dashboard
+
+Preservation rule:
+
+- The current rocket dashboard in `src/pages/artemis.astro` is the stable reference implementation and should be preserved while article copy is developed around it.
+- During article-writing passes, default to editing only the article text above the dashboard unless a diagram change is explicitly requested.
+- Do not restyle, replace, or restructure the current dashboard as part of article drafting work.
 
 # Hardcoded Diagram Rules
 
@@ -74,8 +80,11 @@ Implementation notes:
 - Group-level SVG nodes like `g` may need interaction if the child paths do not carry their own ids.
 - Price highlighting uses shared `priceGroup` keys, so grouped-cost subsystems should highlight together.
 - Tooltip text and left-panel detail text should remain confined to the dashboard component and wrap safely.
+- Long part names, contractor labels, price labels, descriptions, and notes in the diagram panel must never overflow their container.
+- Preserve the existing text-wrap safeguards in `src/pages/artemis.astro`, including `min-width: 0`, `max-width: 100%`, and `overflow-wrap: anywhere` on the detail and tooltip text blocks.
 - If an element is omitted, check `hiddenParts`, then SVG ids, then the part mapping object.
 - The page now distinguishes between exact hidden SVG ids and normalized hidden part groups. Use exact-id hiding when only one mirrored side should disappear.
+- When translating visual spacing or offsets into code, account for the real rendered width of nearby components like keys, toggles, and diagrams so they do not overlap or overflow.
 
 # Research Rules
 
@@ -101,6 +110,18 @@ The current visual language is deliberate.
 - Price mode uses a green saturation scale so the user can compare relative cost intensity quickly.
 - Hover behavior should feel analytical, not decorative: the point is to compare ownership, function, and cost at the part level.
 - Explanatory text should stay concise and read like editorial support for the chart, not like raw engineering documentation.
+
+# Reusable Inline Diagram Pattern
+
+The current inline article diagram treatment in `src/pages/artemis.astro` should be reused for future diagrams in this article unless there is a specific reason to break pattern.
+
+- Center the rocket itself on the article reading axis.
+- Place the key or price scale on the left side of the rocket.
+- If a toggle is needed, place it on the right side of the rocket and align it as a counterpart to the left-side key.
+- Keep the inline figure stripped down relative to the master dashboard.
+- Use the master dashboard below as the reference implementation for data, hover behavior, and mapping logic, but not for inline spacing density.
+- Inline diagrams may selectively simplify hover content depending on the article need.
+- Future outline instructions can specify whether an inline diagram includes a toggle, but the default article figure should follow this same centered key-diagram-toggle structure.
 
 # Data Model Notes
 
@@ -130,6 +151,7 @@ If extending the page, prefer adding to these structures rather than scattering 
 - Do not replace sourced values with visually convenient guesses.
 - Do not silently change scale logic without updating the legend copy.
 - Do not let long labels or notes overflow outside the rocket dashboard component.
+- If text starts spilling out again, fix the panel CSS first rather than shortening sourced copy to force it to fit.
 - Before assuming an SVG element is missing, inspect the source SVG and the hide list.
 
 # Near-Term Build Direction

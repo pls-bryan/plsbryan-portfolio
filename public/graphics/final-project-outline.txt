@@ -1,0 +1,11 @@
+﻿[title] Artemis II and the New Contractor State
+
+
+[subtitle] A working article about what the Artemis program reveals about NASA’s dependence on private industry, and how that relationship has changed since Apollo.
+[p] Artemis II which safely returned last weekend, marked a historic return to manned lunar spaceflight.  but it is also a historic launch because of the scale of industriaal coordination required to make it possible. 
+[p] The broader Artemis program carries an unprecedented budget measured in the tens of billions of dollars[a], and a large share of that cost comes from the fact that so many parts of the launch stack had to be custom designed, manufactured, integrated, and certified for this mission architecture in order for the SLS to be “The only rocket that can send Orion, astronauts, and supplies to the Moon in a single mission.”
+[Diagram 1: Artemis II price diagram]
+[p] As said, Artemis is an unprecedented mission in terms of its scope and scale. Of course, this means it couldn’t have been done alone. For Artemis, NASA turned to its reliable team of private contractors. NASA’s team is a highly specialized network that the organization has been in collaboration with since lunar spaceflight was first conceptualized in the 1960’s. Let’s take a closer look at the companies that made the Artemis II launch happen:
+[Diagram 2: Artemis II parts diagram]
+        [p] Taking both of these charts together now, we can see for example that the most expensive section of the Artemis II SLS was the Core Stage, and that the Core Stage was designed and fabricated primarily by Boeing. Boeing has been at the heart of NASA spaceflight enterprise, having a hand in basically all of their missions since the initial 20th century Space Race. 
+[a]fact check
